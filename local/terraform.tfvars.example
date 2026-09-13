@@ -1,0 +1,11 @@
+# Copie para terraform.tfvars e preencha. terraform.tfvars está no .gitignore — nunca commite valores reais.
+
+db_password    = "troque-esta-senha"
+jwt_secret     = "troque-por-uma-chave-de-no-minimo-32-caracteres"
+admin_password = "troque-esta-senha"
+
+# Opcionais — os defaults já servem para a demo local:
+# cluster_name      = "oficina-local"
+# node_image        = "kindest/node:v1.31.0"
+# app_image         = "oficina-api:local"
+# build_local_image = true
