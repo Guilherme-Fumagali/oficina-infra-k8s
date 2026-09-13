@@ -48,7 +48,7 @@
       "Sid": "Ecr",
       "Effect": "Allow",
       "Action": "ecr:*",
-      "Resource": "arn:aws:ecr:us-east-1:ACCOUNT_ID:repository/oficina-api-*"
+      "Resource": "arn:aws:ecr:us-east-1:ACCOUNT_ID:repository/oficina-api*"
     },
     {
       "Sid": "SsmDescribe",
