@@ -15,12 +15,6 @@ variable "ambiente" {
   }
 }
 
-variable "cluster_name" {
-  description = "Nome do cluster EKS."
-  type        = string
-  default     = "oficina-api-aws"
-}
-
 variable "kubernetes_version" {
   description = "Versão do Kubernetes no EKS."
   type        = string

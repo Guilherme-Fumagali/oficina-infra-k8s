@@ -4,14 +4,14 @@ resource "aws_vpc" "oficina" {
   enable_dns_hostnames = true
 
   tags = {
-    Name                                        = "oficina-api-vpc"
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    Name                                  = "${local.nome}-vpc"
+    "kubernetes.io/cluster/${local.nome}" = "shared"
   }
 }
 
 resource "aws_internet_gateway" "oficina" {
   vpc_id = aws_vpc.oficina.id
-  tags   = { Name = "oficina-api-igw" }
+  tags   = { Name = "${local.nome}-igw" }
 }
 
 resource "aws_subnet" "public" {
@@ -23,9 +23,9 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name                                        = "oficina-api-public-${each.key}"
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/elb"                    = "1"
+    Name                                  = "${local.nome}-public-${each.key}"
+    "kubernetes.io/cluster/${local.nome}" = "shared"
+    "kubernetes.io/role/elb"              = "1"
   }
 }
 
@@ -38,9 +38,9 @@ resource "aws_subnet" "private" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name                                        = "oficina-api-private-${each.key}"
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/internal-elb"           = "1"
+    Name                                  = "${local.nome}-private-${each.key}"
+    "kubernetes.io/cluster/${local.nome}" = "shared"
+    "kubernetes.io/role/internal-elb"     = "1"
   }
 }
 
@@ -55,11 +55,11 @@ data "aws_ami" "al2023_arm" {
 }
 
 resource "aws_security_group" "nat" {
-  name        = "oficina-api-nat-sg"
+  name        = "${local.nome}-nat-sg"
   description = "NAT instance: aceita trafego das subnets privadas e sai para a internet"
   vpc_id      = aws_vpc.oficina.id
 
-  tags = { Name = "oficina-api-nat-sg" }
+  tags = { Name = "${local.nome}-nat-sg" }
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nat_das_privadas" {
@@ -106,14 +106,14 @@ resource "aws_instance" "nat" {
     http_endpoint = "enabled"
   }
 
-  tags = { Name = "oficina-api-nat" }
+  tags = { Name = "${local.nome}-nat" }
 }
 
 resource "aws_eip" "nat" {
   instance = aws_instance.nat.id
   domain   = "vpc"
 
-  tags = { Name = "oficina-api-nat-eip" }
+  tags = { Name = "${local.nome}-nat-eip" }
 
   depends_on = [aws_internet_gateway.oficina]
 }
@@ -126,7 +126,7 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.oficina.id
   }
 
-  tags = { Name = "oficina-api-public-rt" }
+  tags = { Name = "${local.nome}-public-rt" }
 }
 
 resource "aws_route_table_association" "public" {
@@ -143,7 +143,7 @@ resource "aws_route_table" "private" {
     network_interface_id = aws_instance.nat.primary_network_interface_id
   }
 
-  tags = { Name = "oficina-api-private-rt" }
+  tags = { Name = "${local.nome}-private-rt" }
 }
 
 resource "aws_route_table_association" "private" {
@@ -158,15 +158,15 @@ resource "aws_vpc_endpoint" "s3" {
   vpc_endpoint_type = "Gateway"
   route_table_ids   = [aws_route_table.private.id]
 
-  tags = { Name = "oficina-api-s3-endpoint" }
+  tags = { Name = "${local.nome}-s3-endpoint" }
 }
 
 resource "aws_security_group" "lambda" {
-  name        = "oficina-api-lambda-sg"
+  name        = "${local.nome}-lambda-sg"
   description = "Lambda de autenticacao por CPF dentro da VPC"
   vpc_id      = aws_vpc.oficina.id
 
-  tags = { Name = "oficina-api-lambda-sg" }
+  tags = { Name = "${local.nome}-lambda-sg" }
 }
 
 resource "aws_vpc_security_group_egress_rule" "lambda_saida" {
