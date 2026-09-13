@@ -10,7 +10,7 @@ set -euo pipefail
 
 AWS_REGION="${AWS_REGION:-us-east-1}"
 LOCK_TABLE="${TFSTATE_LOCK_TABLE:-oficina-api-tfstate-lock}"
-STATE_KEYS="infra-k8s/base/terraform.tfstate infra-k8s/cluster/terraform.tfstate infra-db/prod/terraform.tfstate"
+STATE_KEYS="$(for a in staging prod; do printf 'infra-k8s/%s/base/terraform.tfstate infra-k8s/%s/cluster/terraform.tfstate infra-db/%s/terraform.tfstate ' "$a" "$a" "$a"; done)"
 
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31mERRO:\033[0m %s\n' "$*" >&2; exit 1; }
