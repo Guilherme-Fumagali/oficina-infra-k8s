@@ -1,0 +1,58 @@
+name: Destroy AWS
+
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: "Qual stack destruir"
+        type: choice
+        options: [cluster, base]
+        default: cluster
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  STACK: ${{ inputs.stack }}
+  AMBIENTE: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
+
+jobs:
+  destroy:
+    name: Destroy (${{ inputs.stack }})
+    runs-on: ubuntu-latest
+    environment: prod
+    defaults:
+      run:
+        working-directory: ${{ inputs.stack }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - run: terraform init -backend-config="key=infra-k8s/${STACK}/terraform.tfstate"
+
+      - name: Destroy
+        env:
+          TF_VAR_ambiente: ${{ env.AMBIENTE }}
+          TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
+          TF_VAR_ci_role_principal_arn: ${{ secrets.AWS_ROLE_ARN }}
+          TF_VAR_cluster_admin_principal_arn: ${{ secrets.AWS_CLUSTER_ADMIN_ARN }}
+          TF_VAR_newrelic_account_id: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
+          TF_VAR_newrelic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
+        run: terraform destroy -auto-approve
+
+      - name: Conferir que nada pago sobrou
+        if: inputs.stack == 'cluster'
+        working-directory: ${{ github.workspace }}
+        run: |
+          echo "EKS:  $(aws eks list-clusters --query 'clusters' --output text)"
+          echo "NAT:  $(aws ec2 describe-instances --filters Name=tag:Name,Values=oficina-api-nat Name=instance-state-name,Values=running --query 'Reservations[].Instances[].InstanceId' --output text)"
+          echo "NLB:  $(aws elbv2 describe-load-balancers --query "LoadBalancers[?contains(LoadBalancerName,'oficina')].LoadBalancerName" --output text)"

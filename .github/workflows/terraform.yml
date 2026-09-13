@@ -1,0 +1,144 @@
+name: Terraform
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: "Qual stack aplicar"
+        type: choice
+        options: [base, cluster]
+        default: base
+      enable_lambda_routes:
+        description: "Segundo apply do cluster: liga as rotas da Lambda"
+        type: boolean
+        default: false
+      aplicar_manifests:
+        description: "Aplica os manifests Kubernetes ao final"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  STACK: ${{ inputs.stack || 'base' }}
+  AMBIENTE: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
+
+jobs:
+  validate:
+    name: Format & validate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack: [base, cluster]
+    defaults:
+      run:
+        working-directory: ${{ matrix.stack }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate
+
+  bootstrap:
+    name: Bootstrap do backend
+    needs: validate
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+      - run: |
+          chmod +x bootstrap/bootstrap.sh
+          bootstrap/bootstrap.sh create
+
+  plan:
+    name: Plan (${{ inputs.stack || 'base' }})
+    needs: bootstrap
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.stack || 'base' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - run: terraform init -backend-config="key=infra-k8s/${STACK}/terraform.tfstate"
+
+      - name: Plan
+        env:
+          TF_VAR_ambiente: ${{ env.AMBIENTE }}
+          TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
+          TF_VAR_newrelic_license_key: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
+          TF_VAR_ci_role_principal_arn: ${{ secrets.AWS_ROLE_ARN }}
+          TF_VAR_cluster_admin_principal_arn: ${{ secrets.AWS_CLUSTER_ADMIN_ARN }}
+          TF_VAR_newrelic_account_id: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
+          TF_VAR_newrelic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
+          TF_VAR_alerta_email: ${{ vars.ALERTA_EMAIL }}
+          TF_VAR_enable_newrelic: ${{ vars.ENABLE_NEWRELIC || 'false' }}
+          TF_VAR_enable_lambda_routes: ${{ inputs.enable_lambda_routes || 'false' }}
+          TF_VAR_aplicar_manifests: ${{ inputs.aplicar_manifests || 'false' }}
+        run: terraform plan -out=tfplan
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ env.STACK }}
+          path: ${{ env.STACK }}/tfplan
+          retention-days: 1
+
+  apply:
+    name: Apply (${{ inputs.stack || 'base' }})
+    needs: plan
+    if: github.ref_name == 'main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push')
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.stack == 'cluster' && 'prod' || 'base' }}
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.stack || 'base' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - run: terraform init -backend-config="key=infra-k8s/${STACK}/terraform.tfstate"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ env.STACK }}
+          path: ${{ env.STACK }}
+
+      - run: terraform apply -auto-approve tfplan
+
+      - run: terraform output
