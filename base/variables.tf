@@ -13,11 +13,6 @@ variable "ambiente" {
   }
 }
 
-variable "jwt_secret" {
-  type      = string
-  sensitive = true
-}
-
 variable "newrelic_license_key" {
   type      = string
   sensitive = true
