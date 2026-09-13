@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oficina-api
+  namespace: oficina
+  labels:
+    app: oficina-api
+spec:
+  selector:
+    matchLabels:
+      app: oficina-api
+  template:
+    metadata:
+      labels:
+        app: oficina-api
+    spec:
+      containers:
+        - name: oficina-api
+          # Imagem no ECR: com nós em subnet privada, o pull vem pelo gateway
+          # endpoint de S3 sem passar pela NAT instance (ADR-008).
+          # A tag é substituída pela pipeline (kubectl set image).
+          image: ECR_REPOSITORY_URL:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: oficina-api-config
+            - secretRef:
+                name: oficina-api-secret
+          env:
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=70.0"
+            - name: NEW_RELIC_APP_NAME
+              value: "oficina-api (prod)"
+            # Fluent Bit da integração Kubernetes é quem encaminha log. Ligar os
+            # dois envia cada linha duas vezes e queima o free tier pela metade
+            # (Aula 08, SPEC-03 §4).
+            - name: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_ENABLED
+              value: "false"
+            - name: NEW_RELIC_LABELS
+              value: "fase:tech-challenge-3"
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 10
+            # O -javaagent do New Relic adiciona ~1s à subida; a folga aqui evita
+            # restart em loop no primeiro boot (SPEC-03 §2).
+            failureThreshold: 40
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 750m
+              memory: 1Gi

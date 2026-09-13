@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oficina-api-config
+  namespace: oficina
+data:
+  PORT: "8080"
+  # Ativa o log estruturado JSON com trace.id/span.id (SPEC-04).
+  SPRING_PROFILES_ACTIVE: "k8s"
+  ENV: "prod"
+  NOTIFICACAO_CANAL: "smtp"
+  SMTP_HOST: "oficina-mailhog"
+  SMTP_PORT: "1025"
+  MAIL_FROM: "oficina@example.com"
+  MANAGEMENT_TRACING_ENABLED: "true"
+  # Métricas de negócio por OTLP para o New Relic (SPEC-03 §3).
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: "https://otlp.nr-data.net/v1/metrics"
+  METRICS_EXPORT_STEP: "60s"
+  # DB_URL e MAIL_BASE_URL são preenchidos pelo Terraform a partir do SSM.

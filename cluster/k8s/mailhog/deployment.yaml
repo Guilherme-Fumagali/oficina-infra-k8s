@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oficina-mailhog
+  namespace: oficina
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oficina-mailhog
+  template:
+    metadata:
+      labels:
+        app: oficina-mailhog
+    spec:
+      containers:
+        - name: mailhog
+          image: mailhog/mailhog:v1.0.1
+          ports:
+            - containerPort: 1025
+            - containerPort: 8025
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

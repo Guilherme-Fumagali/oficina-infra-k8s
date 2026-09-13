@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oficina-db-config
+  namespace: oficina
+data:
+  POSTGRES_DB: "oficina"
