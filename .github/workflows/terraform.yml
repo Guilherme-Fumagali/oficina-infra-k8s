@@ -25,6 +25,17 @@ permissions:
 env:
   STACK: ${{ inputs.stack || 'base' }}
   AMBIENTE: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
+  TF_VAR_ambiente: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
+  TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
+  TF_VAR_newrelic_license_key: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
+  TF_VAR_ci_role_principal_arn: ${{ vars.API_DEPLOY_ROLE_ARN }}
+  TF_VAR_cluster_admin_principal_arn: ${{ secrets.AWS_CLUSTER_ADMIN_ARN }}
+  TF_VAR_newrelic_account_id: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
+  TF_VAR_newrelic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
+  TF_VAR_alerta_email: ${{ vars.ALERTA_EMAIL }}
+  TF_VAR_enable_newrelic: ${{ vars.ENABLE_NEWRELIC || 'false' }}
+  TF_VAR_enable_lambda_routes: ${{ inputs.enable_lambda_routes || 'false' }}
+  TF_VAR_aplicar_manifests: ${{ inputs.aplicar_manifests || 'false' }}
 
 jobs:
   validate:
@@ -87,26 +98,7 @@ jobs:
 
       - run: terraform init -backend-config="key=infra-k8s/${STACK}/terraform.tfstate"
 
-      - name: Plan
-        env:
-          TF_VAR_ambiente: ${{ env.AMBIENTE }}
-          TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
-          TF_VAR_newrelic_license_key: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
-          TF_VAR_ci_role_principal_arn: ${{ vars.API_DEPLOY_ROLE_ARN }}
-          TF_VAR_cluster_admin_principal_arn: ${{ secrets.AWS_CLUSTER_ADMIN_ARN }}
-          TF_VAR_newrelic_account_id: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
-          TF_VAR_newrelic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
-          TF_VAR_alerta_email: ${{ vars.ALERTA_EMAIL }}
-          TF_VAR_enable_newrelic: ${{ vars.ENABLE_NEWRELIC || 'false' }}
-          TF_VAR_enable_lambda_routes: ${{ inputs.enable_lambda_routes || 'false' }}
-          TF_VAR_aplicar_manifests: ${{ inputs.aplicar_manifests || 'false' }}
-        run: terraform plan -out=tfplan
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-${{ env.STACK }}
-          path: ${{ env.STACK }}/tfplan
-          retention-days: 1
+      - run: terraform plan
 
   apply:
     name: Apply (${{ inputs.stack || 'base' }})
@@ -134,11 +126,6 @@ jobs:
 
       - run: terraform init -backend-config="key=infra-k8s/${STACK}/terraform.tfstate"
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: tfplan-${{ env.STACK }}
-          path: ${{ env.STACK }}
-
-      - run: terraform apply -auto-approve tfplan
+      - run: terraform apply -auto-approve
 
       - run: terraform output
