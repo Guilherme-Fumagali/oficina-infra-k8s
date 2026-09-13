@@ -1,0 +1,120 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CloudFormationLeitura",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:GetTemplateSummary",
+        "cloudformation:ListStacks",
+        "cloudformation:ValidateTemplate"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudFormationStacks",
+      "Effect": "Allow",
+      "Action": "cloudformation:*",
+      "Resource": [
+        "arn:aws:cloudformation:us-east-1:ACCOUNT_ID:stack/oficina-auth-lambda-*/*",
+        "arn:aws:cloudformation:us-east-1:ACCOUNT_ID:stack/aws-sam-cli-managed-default/*",
+        "arn:aws:cloudformation:us-east-1:ACCOUNT_ID:changeSet/samcli-deploy*/*",
+        "arn:aws:cloudformation:us-east-1:aws:transform/Serverless-2016-10-31"
+      ]
+    },
+    {
+      "Sid": "BucketDoSam",
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": "arn:aws:s3:::aws-sam-cli-managed-default-samclisourcebucket-*"
+    },
+    {
+      "Sid": "Funcoes",
+      "Effect": "Allow",
+      "Action": "lambda:*",
+      "Resource": [
+        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:oficina-auth-*",
+        "arn:aws:lambda:us-east-1:ACCOUNT_ID:function:oficina-authorizer-*"
+      ]
+    },
+    {
+      "Sid": "VpcConfigDaFuncao",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeVpcs"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "PapeisSoComBoundary",
+      "Effect": "Allow",
+      "Action": [
+        "iam:AttachRolePolicy",
+        "iam:CreateRole",
+        "iam:PutRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::ACCOUNT_ID:role/oficina-auth-lambda-prod-*",
+        "arn:aws:iam::ACCOUNT_ID:role/oficina-auth-lambda-staging-*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::ACCOUNT_ID:policy/oficina-lambda-boundary"
+        }
+      }
+    },
+    {
+      "Sid": "PapeisManutencao",
+      "Effect": "Allow",
+      "Action": [
+        "iam:DeleteRole",
+        "iam:DeleteRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListRolePolicies",
+        "iam:TagRole",
+        "iam:UntagRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::ACCOUNT_ID:role/oficina-auth-lambda-prod-*",
+        "arn:aws:iam::ACCOUNT_ID:role/oficina-auth-lambda-staging-*"
+      ]
+    },
+    {
+      "Sid": "PassarPapelParaLambda",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::ACCOUNT_ID:role/oficina-auth-lambda-prod-*",
+        "arn:aws:iam::ACCOUNT_ID:role/oficina-auth-lambda-staging-*"
+      ],
+      "Condition": {
+        "StringEquals": { "iam:PassedToService": "lambda.amazonaws.com" }
+      }
+    },
+    {
+      "Sid": "SsmDescribe",
+      "Effect": "Allow",
+      "Action": "ssm:DescribeParameters",
+      "Resource": "*"
+    },
+    {
+      "Sid": "SsmContrato",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:AddTagsToResource",
+        "ssm:DeleteParameter",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:ListTagsForResource",
+        "ssm:PutParameter",
+        "ssm:RemoveTagsFromResource"
+      ],
+      "Resource": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/oficina/*"
+    }
+  ]
+}
