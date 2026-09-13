@@ -108,6 +108,7 @@
       "Effect": "Allow",
       "Action": [
         "cloudformation:DescribeStacks",
+        "cloudformation:ListStacks",
         "rds:DescribeDBInstances"
       ],
       "Resource": "*"
