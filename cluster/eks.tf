@@ -59,7 +59,8 @@ resource "aws_eks_cluster" "oficina" {
   version  = var.kubernetes_version
 
   access_config {
-    authentication_mode = "API_AND_CONFIG_MAP"
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
   }
 
   vpc_config {
@@ -104,10 +105,11 @@ resource "aws_eks_access_policy_association" "ci" {
   count         = var.ci_role_principal_arn == "" ? 0 : 1
   cluster_name  = aws_eks_cluster.oficina.name
   principal_arn = var.ci_role_principal_arn
-  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
 
   access_scope {
-    type = "cluster"
+    type       = "namespace"
+    namespaces = ["oficina"]
   }
 
   depends_on = [aws_eks_access_entry.ci]

@@ -92,7 +92,7 @@ jobs:
           TF_VAR_ambiente: ${{ env.AMBIENTE }}
           TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
           TF_VAR_newrelic_license_key: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
-          TF_VAR_ci_role_principal_arn: ${{ secrets.AWS_ROLE_ARN }}
+          TF_VAR_ci_role_principal_arn: ${{ vars.API_DEPLOY_ROLE_ARN }}
           TF_VAR_cluster_admin_principal_arn: ${{ secrets.AWS_CLUSTER_ADMIN_ARN }}
           TF_VAR_newrelic_account_id: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
           TF_VAR_newrelic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}

@@ -1,0 +1,120 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "TfStateBucket",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::oficina-api-tfstate-ACCOUNT_ID-*"
+    },
+    {
+      "Sid": "TfStateObjetos",
+      "Effect": "Allow",
+      "Action": [
+        "s3:DeleteObject",
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::oficina-api-tfstate-ACCOUNT_ID-*/infra-db/*"
+    },
+    {
+      "Sid": "TfLock",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:PutItem"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/oficina-api-tfstate-lock"
+    },
+    {
+      "Sid": "RdsLeitura",
+      "Effect": "Allow",
+      "Action": "rds:Describe*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Rds",
+      "Effect": "Allow",
+      "Action": "rds:*",
+      "Resource": [
+        "arn:aws:rds:us-east-1:ACCOUNT_ID:db:oficina-api-db-*",
+        "arn:aws:rds:us-east-1:ACCOUNT_ID:subgrp:oficina-api-db-*",
+        "arn:aws:rds:us-east-1:ACCOUNT_ID:pg:oficina-api-db-*",
+        "arn:aws:rds:us-east-1:ACCOUNT_ID:og:default:postgres-*"
+      ]
+    },
+    {
+      "Sid": "RdsServiceLinkedRole",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/aws-service-role/rds.amazonaws.com/*",
+      "Condition": {
+        "StringEquals": { "iam:AWSServiceName": "rds.amazonaws.com" }
+      }
+    },
+    {
+      "Sid": "SecurityGroupDoRds",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:CreateSecurityGroup",
+        "ec2:CreateTags",
+        "ec2:DeleteSecurityGroup",
+        "ec2:DeleteTags",
+        "ec2:Describe*",
+        "ec2:ModifySecurityGroupRules",
+        "ec2:RevokeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
+        "ec2:UpdateSecurityGroupRuleDescriptionsIngress"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "aws:RequestedRegion": "us-east-1" }
+      }
+    },
+    {
+      "Sid": "SsmDescribe",
+      "Effect": "Allow",
+      "Action": "ssm:DescribeParameters",
+      "Resource": "*"
+    },
+    {
+      "Sid": "SsmContrato",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:AddTagsToResource",
+        "ssm:DeleteParameter",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:ListTagsForResource",
+        "ssm:PutParameter",
+        "ssm:RemoveTagsFromResource"
+      ],
+      "Resource": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/oficina/*"
+    },
+    {
+      "Sid": "KmsViaSsmERds",
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateGrant",
+        "kms:Decrypt",
+        "kms:DescribeKey",
+        "kms:Encrypt",
+        "kms:GenerateDataKey*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": [
+            "ssm.us-east-1.amazonaws.com",
+            "rds.us-east-1.amazonaws.com"
+          ]
+        }
+      }
+    }
+  ]
+}

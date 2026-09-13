@@ -70,7 +70,7 @@ variable "cluster_admin_principal_arn" {
 }
 
 variable "ci_role_principal_arn" {
-  description = "Role assumido pela pipeline, com acesso admin ao cluster para o deploy."
+  description = "Role da pipeline do oficina-api, com permissão de edição só no namespace oficina."
   type        = string
   default     = ""
 }

@@ -92,6 +92,19 @@ Efeito colateral que economiza: em subnet privada os nós deixam de ter IPv4 pú
 
 A `base` fica de pé o tempo todo: a pipeline da aplicação precisa do ECR para publicar imagem, e o custo é irrelevante. O `cluster` sobe para validar e apresentar, e é destruído depois — push em `main` nunca o aciona.
 
+## Acesso da pipeline à AWS
+
+Sem chave de acesso: cada repositório assume **a própria role** por OIDC, criada por `bootstrap/github-oidc.sh`.
+
+| Repositório | Role | Pode |
+|---|---|---|
+| `oficina-api` | `oficina-api-github-actions` | push no ECR `oficina-api`, ler 2 parâmetros do SSM, editar o namespace `oficina` |
+| `oficina-auth-lambda` | `oficina-auth-lambda-github-actions` | stack SAM, funções `oficina-auth*`, roles só com o boundary `oficina-lambda-boundary` |
+| `oficina-infra-db` | `oficina-infra-db-github-actions` | RDS `oficina-api-db-*`, security group e parâmetros `/oficina/*` |
+| `oficina-infra-k8s` | `oficina-infra-k8s-github-actions` | rede, EKS, NLB, API Gateway, ECR, budget e roles `oficina-api-eks-*` |
+
+A trust policy só aceita token da `main` ou de environment (`base`, `prod`) restrito à `main`; `prod` dos repositórios de infra exige revisor. Branch de feature roda validação, nunca credencial.
+
 ## Execução
 
 Pré-requisitos: Terraform 1.9.8+, AWS CLI, `kubectl` e credenciais.
