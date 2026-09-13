@@ -47,7 +47,7 @@ Provisiona por Terraform tudo que fica entre a internet e a aplicação: a VPC c
 ## Tecnologias
 
 - **Terraform 1.9.8** · providers AWS ~> 5.70, New Relic ~> 3.48
-- **Amazon EKS 1.31** · node group gerenciado · **HPA** por CPU e memória
+- **Amazon EKS 1.36** · node group gerenciado · **HPA** por CPU e memória
 - **Amazon ECR** com scan on push e lifecycle policy
 - **API Gateway HTTP API** + VPC Link + Network Load Balancer interno
 - **New Relic** — dashboards, alert conditions e monitor sintético, tudo em código
@@ -58,7 +58,7 @@ Provisiona por Terraform tudo que fica entre a internet e a aplicação: a VPC c
 | Grupo | Recursos |
 |---|---|
 | Rede | VPC, 2 subnets públicas, 2 privadas, IGW, **NAT instance `t4g.nano`**, route tables, **S3 gateway endpoint**, SG da Lambda |
-| Cluster | EKS 1.31, node group `t3.small` ×2 (max 4) **em subnet privada**, IAM roles, access entries |
+| Cluster | EKS 1.36, node group `t3.small` ×2 (max 4) **em subnet privada**, IAM roles, access entries |
 | Registry | ECR `oficina-api` + lifecycle de 10 imagens |
 | Borda | HTTP API, VPC Link, NLB interno, target group no NodePort 30080, authorizer, stage com access log |
 | Observabilidade | 6 alert conditions, monitor sintético, 2 dashboards |
