@@ -24,7 +24,7 @@ variable "cluster_name" {
 variable "kubernetes_version" {
   description = "Versão do Kubernetes no EKS."
   type        = string
-  default     = "1.31"
+  default     = "1.36"
 }
 
 variable "node_instance_types" {

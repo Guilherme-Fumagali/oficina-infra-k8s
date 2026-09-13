@@ -63,6 +63,10 @@ resource "aws_eks_cluster" "oficina" {
     bootstrap_cluster_creator_admin_permissions = true
   }
 
+  upgrade_policy {
+    support_type = "STANDARD"
+  }
+
   vpc_config {
     subnet_ids = concat(
       [for s in aws_subnet.private : s.id],
