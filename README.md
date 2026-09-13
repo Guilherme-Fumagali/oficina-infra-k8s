@@ -157,6 +157,20 @@ Com a `base` de pé, o passo 3 funciona sem cluster: a imagem vai para o ECR e o
 
 O passo 3 antes do 4 é obrigatório: a Lambda consulta `clientes.status`, coluna criada pela migration `V6`.
 
+### Ordem do destroy
+
+Workflow **Destroy AWS** em cada repositório, na ordem inversa:
+
+```
+1. oficina-auth-lambda  (ENIs da Lambda prendem subnet e security group)
+2. oficina-infra-db     (RDS usa as subnets e referencia os SGs do cluster)
+3. oficina-infra-k8s    stack=cluster
+4. oficina-infra-k8s    stack=base      (opcional, centavos/mês)
+5. bootstrap/bootstrap.sh destroy       (local, só no fim da fase)
+```
+
+O destroy do `cluster` falha logo no início se o RDS ou a stack da Lambda ainda existirem, e o da `base` falha se o EKS existir. Sem essa trava, o Terraform parava no meio com `DependencyViolation`.
+
 ## Contrato com os outros repositórios
 
 Acoplamento único: **SSM Parameter Store** sob `/oficina/<ambiente>/`.
