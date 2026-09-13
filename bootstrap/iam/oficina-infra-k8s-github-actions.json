@@ -104,6 +104,15 @@
       }
     },
     {
+      "Sid": "ConferenciaDoDestroy",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:DescribeStacks",
+        "rds:DescribeDBInstances"
+      ],
+      "Resource": "*"
+    },
+    {
       "Sid": "LogsDoGateway",
       "Effect": "Allow",
       "Action": [
