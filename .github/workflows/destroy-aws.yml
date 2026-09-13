@@ -33,6 +33,27 @@ jobs:
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
+      - name: Conferir que banco e Lambda já foram destruídos
+        if: inputs.stack == 'cluster'
+        working-directory: ${{ github.workspace }}
+        run: |
+          RDS=$(aws rds describe-db-instances --query "DBInstances[?DBInstanceIdentifier=='oficina-api-db-${AMBIENTE}'].DBInstanceIdentifier" --output text)
+          LAMBDA=$(aws cloudformation describe-stacks --query "Stacks[?StackName=='oficina-auth-lambda-${AMBIENTE}'].StackName" --output text)
+          if [ -n "$RDS$LAMBDA" ]; then
+            echo "::error::Rode antes o Destroy AWS de oficina-auth-lambda e oficina-infra-db. Ainda de pé: $RDS $LAMBDA"
+            exit 1
+          fi
+
+      - name: Conferir que o cluster já foi destruído
+        if: inputs.stack == 'base'
+        working-directory: ${{ github.workspace }}
+        run: |
+          EKS=$(aws eks list-clusters --query "clusters[?starts_with(@, 'oficina-api')]" --output text)
+          if [ -n "$EKS" ]; then
+            echo "::error::Destrua o stack cluster antes da base. Ainda de pé: $EKS"
+            exit 1
+          fi
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.9.8"
