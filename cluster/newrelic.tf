@@ -2,7 +2,7 @@ locals {
   amb        = title(var.ambiente)
   nr_enabled = var.enable_newrelic ? 1 : 0
 
-  runbook_base = "https://github.com/guilherme-fumagali/oficina-api/blob/main/docs/runbooks"
+  runbook_base = "https://github.com/Guilherme-Fumagali/tech-challenge-1/blob/main/docs/runbooks"
 }
 
 resource "newrelic_alert_policy" "oficina" {
@@ -59,7 +59,7 @@ resource "newrelic_nrql_alert_condition" "api_latencia_p95" {
   aggregation_delay  = 120
 
   nrql {
-    query = "SELECT percentile(duration, 95) * 1000 FROM Transaction WHERE appName LIKE 'oficina-api%'"
+    query = "SELECT percentile(duration, 95) * 1000 FROM Transaction WHERE appName = '${local.nome}'"
   }
 
   warning {
@@ -82,7 +82,7 @@ resource "newrelic_nrql_alert_condition" "api_taxa_erro" {
   aggregation_delay  = 120
 
   nrql {
-    query = "SELECT percentage(count(*), WHERE error IS true) FROM Transaction WHERE appName LIKE 'oficina-api%'"
+    query = "SELECT percentage(count(*), WHERE error IS true) FROM Transaction WHERE appName = '${local.nome}'"
   }
 
   critical {
@@ -266,7 +266,7 @@ resource "newrelic_one_dashboard" "tecnico" {
       height = 3
 
       nrql_query {
-        query = "SELECT percentile(duration, 95, 99) * 1000 FROM Transaction WHERE appName LIKE 'oficina-api%' TIMESERIES AUTO"
+        query = "SELECT percentile(duration, 95, 99) * 1000 FROM Transaction WHERE appName = '${local.nome}' TIMESERIES AUTO"
       }
     }
 
@@ -278,7 +278,7 @@ resource "newrelic_one_dashboard" "tecnico" {
       height = 3
 
       nrql_query {
-        query = "SELECT count(*) FROM Transaction WHERE appName LIKE 'oficina-api%' FACET httpResponseCode TIMESERIES AUTO"
+        query = "SELECT count(*) FROM Transaction WHERE appName = '${local.nome}' FACET httpResponseCode TIMESERIES AUTO"
       }
     }
 
@@ -314,7 +314,7 @@ resource "newrelic_one_dashboard" "tecnico" {
       height = 3
 
       nrql_query {
-        query = "SELECT apdex(duration, t: 0.5) FROM Transaction WHERE appName LIKE 'oficina-api%'"
+        query = "SELECT apdex(duration, t: 0.5) FROM Transaction WHERE appName = '${local.nome}'"
       }
     }
   }

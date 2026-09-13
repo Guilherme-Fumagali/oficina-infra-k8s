@@ -26,7 +26,6 @@ env:
   STACK: ${{ inputs.stack || 'base' }}
   AMBIENTE: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
   TF_VAR_ambiente: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
-  TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
   TF_VAR_newrelic_license_key: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
   TF_VAR_ci_role_principal_arn: ${{ vars.API_DEPLOY_ROLE_ARN }}
   TF_VAR_cluster_admin_principal_arn: ${{ secrets.AWS_CLUSTER_ADMIN_ARN }}
@@ -59,7 +58,7 @@ jobs:
   bootstrap:
     name: Bootstrap do backend
     needs: validate
-    if: github.ref_name == 'main'
+    if: contains(fromJSON('["main", "develop"]'), github.ref_name)
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -96,16 +95,15 @@ jobs:
         with:
           terraform_version: "1.9.8"
 
-      - run: terraform init -backend-config="key=infra-k8s/${STACK}/terraform.tfstate"
+      - run: terraform init -backend-config="key=infra-k8s/${AMBIENTE}/${STACK}/terraform.tfstate"
 
       - run: terraform plan
 
   apply:
     name: Apply (${{ inputs.stack || 'base' }})
     needs: plan
-    if: github.ref_name == 'main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'push')
     runs-on: ubuntu-latest
-    environment: ${{ inputs.stack == 'cluster' && 'prod' || 'base' }}
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
     permissions:
       id-token: write
       contents: read
@@ -124,7 +122,7 @@ jobs:
         with:
           terraform_version: "1.9.8"
 
-      - run: terraform init -backend-config="key=infra-k8s/${STACK}/terraform.tfstate"
+      - run: terraform init -backend-config="key=infra-k8s/${AMBIENTE}/${STACK}/terraform.tfstate"
 
       - run: terraform apply -auto-approve
 

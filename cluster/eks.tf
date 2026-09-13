@@ -9,7 +9,7 @@ data "aws_iam_policy_document" "eks_cluster_assume" {
 }
 
 resource "aws_iam_role" "eks_cluster" {
-  name               = "oficina-api-eks-cluster-role"
+  name               = "oficina-api-eks-cluster-role-${var.ambiente}"
   assume_role_policy = data.aws_iam_policy_document.eks_cluster_assume.json
 }
 
@@ -29,7 +29,7 @@ data "aws_iam_policy_document" "eks_node_assume" {
 }
 
 resource "aws_iam_role" "eks_node" {
-  name               = "oficina-api-eks-node-role"
+  name               = "oficina-api-eks-node-role-${var.ambiente}"
   assume_role_policy = data.aws_iam_policy_document.eks_node_assume.json
 }
 
@@ -54,7 +54,7 @@ resource "aws_iam_role_policy_attachment" "eks_node_ssm" {
 }
 
 resource "aws_eks_cluster" "oficina" {
-  name     = var.cluster_name
+  name     = local.nome
   role_arn = aws_iam_role.eks_cluster.arn
   version  = var.kubernetes_version
 
@@ -121,7 +121,7 @@ resource "aws_eks_access_policy_association" "ci" {
 
 resource "aws_eks_node_group" "oficina" {
   cluster_name    = aws_eks_cluster.oficina.name
-  node_group_name = "oficina-api-nodes"
+  node_group_name = "${local.nome}-nodes"
   node_role_arn   = aws_iam_role.eks_node.arn
 
   subnet_ids     = [for s in aws_subnet.private : s.id]

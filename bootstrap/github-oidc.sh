@@ -10,12 +10,13 @@ BOUNDARY_NAME="oficina-lambda-boundary"
 IAM_DIR="$(cd "$(dirname "$0")" && pwd)/iam"
 
 REPOS=(
-  "tech-challenge-1|oficina-api-github-actions|prod"
-  "oficina-auth-lambda|oficina-auth-lambda-github-actions|prod"
-  "oficina-infra-db|oficina-infra-db-github-actions|prod"
-  "oficina-infra-k8s|oficina-infra-k8s-github-actions|base prod"
+  "tech-challenge-1|oficina-api-github-actions"
+  "oficina-auth-lambda|oficina-auth-lambda-github-actions"
+  "oficina-infra-db|oficina-infra-db-github-actions"
+  "oficina-infra-k8s|oficina-infra-k8s-github-actions"
 )
-AMBIENTES_COM_REVISOR="oficina-infra-db/prod oficina-infra-k8s/prod"
+declare -A BRANCH_DO_AMBIENTE=([staging]=develop [prod]=main)
+AMBIENTE_COM_REVISOR="prod"
 
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31mERRO:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -60,12 +61,11 @@ garantir_boundary() {
 }
 
 trust_policy() {
-  local repo="$1" ambientes="$2" prefixo
+  local repo="$1" prefixo
   prefixo="$(gh api "repos/${OWNER}/${repo}/actions/oidc/customization/sub" -q '.sub_claim_prefix // empty')"
   prefixo="${prefixo:-repo:${OWNER}/${repo}}"
 
-  jq -n --arg provider "$PROVIDER_ARN" --arg host "$PROVIDER_HOST" \
-        --arg prefixo "$prefixo" --arg ambientes "$ambientes" '{
+  jq -n --arg provider "$PROVIDER_ARN" --arg host "$PROVIDER_HOST" --arg prefixo "$prefixo" '{
     Version: "2012-10-17",
     Statement: [{
       Effect: "Allow",
@@ -74,10 +74,12 @@ trust_policy() {
       Condition: {
         StringEquals: {
           ($host + ":aud"): "sts.amazonaws.com",
-          ($host + ":sub"): (
-            [$prefixo + ":ref:refs/heads/main"]
-            + ($ambientes | split(" ") | map($prefixo + ":environment:" + .))
-          )
+          ($host + ":sub"): [
+            $prefixo + ":ref:refs/heads/develop",
+            $prefixo + ":environment:staging",
+            $prefixo + ":ref:refs/heads/main",
+            $prefixo + ":environment:prod"
+          ]
         }
       }
     }]
@@ -85,8 +87,8 @@ trust_policy() {
 }
 
 garantir_role() {
-  local repo="$1" role="$2" ambientes="$3" trust
-  trust="$(trust_policy "$repo" "$ambientes")"
+  local repo="$1" role="$2" trust
+  trust="$(trust_policy "$repo")"
 
   if aws iam get-role --role-name "$role" >/dev/null 2>&1; then
     log "Role $role já existe — atualizando a trust policy."
@@ -113,23 +115,23 @@ garantir_role() {
 }
 
 garantir_ambiente() {
-  local repo="$1" ambiente="$2" revisores='[]' login
-  if [[ " $AMBIENTES_COM_REVISOR " == *" ${repo}/${ambiente} "* ]]; then
+  local repo="$1" ambiente="$2" branch="${BRANCH_DO_AMBIENTE[$2]}" revisores='[]' login
+  if [ "$ambiente" = "$AMBIENTE_COM_REVISOR" ]; then
     revisores="$(for login in $REVISORES; do
       gh api "users/${login}" -q '{type: "User", id: .id}'
     done | jq -s -c .)"
   fi
 
-  log "Environment ${repo}/${ambiente}: só main, revisores=$(jq -r 'length' <<<"$revisores")."
+  log "Environment ${repo}/${ambiente}: só ${branch}, revisores=$(jq -r 'length' <<<"$revisores")."
   jq -n --argjson revisores "$revisores" '{
     reviewers: $revisores,
     deployment_branch_policy: { protected_branches: false, custom_branch_policies: true }
   }' | gh api -X PUT "repos/${OWNER}/${repo}/environments/${ambiente}" --input - >/dev/null
 
   if ! gh api "repos/${OWNER}/${repo}/environments/${ambiente}/deployment-branch-policies" \
-      -q '.branch_policies[].name' | grep -qx main; then
+      -q '.branch_policies[].name' | grep -qx "$branch"; then
     gh api -X POST "repos/${OWNER}/${repo}/environments/${ambiente}/deployment-branch-policies" \
-      -f name=main -f type=branch >/dev/null
+      -f name="$branch" -f type=branch >/dev/null
   fi
 }
 
@@ -138,14 +140,14 @@ garantir_provider
 garantir_boundary
 
 for entrada in "${REPOS[@]}"; do
-  IFS='|' read -r repo role ambientes <<<"$entrada"
-  for ambiente in $ambientes; do
+  IFS='|' read -r repo role <<<"$entrada"
+  for ambiente in staging prod; do
     garantir_ambiente "$repo" "$ambiente"
   done
-  garantir_role "$repo" "$role" "$ambientes"
+  garantir_role "$repo" "$role"
 done
 
 gh variable set API_DEPLOY_ROLE_ARN --repo "${OWNER}/oficina-infra-k8s" \
   --body "arn:aws:iam::${ACCOUNT_ID}:role/oficina-api-github-actions"
 
-log "Pronto. Cada repositório assume só a própria role, só a partir da main ou de environment restrito à main."
+log "Pronto. Cada repositório assume só a própria role: develop/staging para homologação, main/prod para produção."

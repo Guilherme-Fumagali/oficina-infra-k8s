@@ -83,14 +83,28 @@ Efeito colateral que economiza: em subnet privada os nós deixam de ter IPv4 pú
 
 > **Limitação aceita:** a NAT instance é ponto único de falha, numa AZ. Se cair, telemetria para de fluir e pull de imagem falha. Impacto é perda de observabilidade, não indisponibilidade da API. Registrado como débito técnico.
 
+## Dois ambientes segregados
+
+| | Homologação | Produção |
+|---|---|---|
+| Branch | `develop` | `main` |
+| GitHub Environment | `staging`, sem aprovação | `prod`, com revisor |
+| Recursos | `oficina-api-staging-*`, VPC própria | `oficina-api-prod-*`, VPC própria |
+| State | `infra-k8s/staging/<stack>` | `infra-k8s/prod/<stack>` |
+| Contrato SSM | `/oficina/staging/…` | `/oficina/prod/…` |
+
+Nenhum recurso, state, parâmetro ou segredo é compartilhado entre os dois. A apresentação e os testes rodam em homologação; produção tem o mesmo código e a mesma esteira, protegida por aprovação.
+
 ## Duas stacks, dois custos
 
 | Stack | Recursos | Custo | Quando aplica |
 |---|---|---|---|
-| **`base/`** | ECR, parâmetros SSM (`ecr-repository-url`, `jwt-secret`, `newrelic-license-key`) | centavos/mês | automático no merge em `main` |
-| **`cluster/`** | VPC, NAT, EKS, NLB, API Gateway, New Relic, manifests | ~US$ 0,20/h | **só por `workflow_dispatch`**, com aprovação |
+| **`base/`** | ECR, parâmetros SSM (`ecr-repository-url`, `jwt-secret`, `newrelic-license-key`) | centavos/mês | push em `develop` (staging) ou `main` (prod, com aprovação) |
+| **`cluster/`** | VPC, NAT, EKS, NLB, API Gateway, New Relic, manifests | ~US$ 0,20/h | **só por `workflow_dispatch`** na branch do ambiente |
 
-A `base` fica de pé o tempo todo: a pipeline da aplicação precisa do ECR para publicar imagem, e o custo é irrelevante. O `cluster` sobe para validar e apresentar, e é destruído depois — push em `main` nunca o aciona.
+A `base` fica de pé o tempo todo: a pipeline da aplicação precisa do ECR para publicar imagem, e o custo é irrelevante. O `cluster` sobe para validar e apresentar, e é destruído depois — push nunca o aciona.
+
+O `jwt-secret` é gerado pelo próprio Terraform (`random_password`), um por ambiente, e não passa pelo GitHub.
 
 ## Acesso da pipeline à AWS
 
@@ -98,12 +112,12 @@ Sem chave de acesso: cada repositório assume **a própria role** por OIDC, cria
 
 | Repositório | Role | Pode |
 |---|---|---|
-| `oficina-api` | `oficina-api-github-actions` | push no ECR `oficina-api`, ler 2 parâmetros do SSM, editar o namespace `oficina` |
+| `tech-challenge-1` | `oficina-api-github-actions` | push nos ECR `oficina-api-*`, ler 2 parâmetros do SSM, editar o namespace `oficina` |
 | `oficina-auth-lambda` | `oficina-auth-lambda-github-actions` | stack SAM, funções `oficina-auth*`, roles só com o boundary `oficina-lambda-boundary` |
 | `oficina-infra-db` | `oficina-infra-db-github-actions` | RDS `oficina-api-db-*`, security group e parâmetros `/oficina/*` |
 | `oficina-infra-k8s` | `oficina-infra-k8s-github-actions` | rede, EKS, NLB, API Gateway, ECR, budget e roles `oficina-api-eks-*` |
 
-A trust policy só aceita token da `main` ou de environment (`base`, `prod`) restrito à `main`; `prod` dos repositórios de infra exige revisor. Branch de feature roda validação, nunca credencial.
+A trust policy só aceita token de `develop`/`staging` e de `main`/`prod`, com cada environment restrito à própria branch; `prod` exige revisor. Branch de feature roda validação, nunca credencial.
 
 ## Execução
 
@@ -111,12 +125,12 @@ Pré-requisitos: Terraform 1.9.8+, AWS CLI, `kubectl` e credenciais.
 
 ```bash
 cd base
-terraform init -backend-config="key=infra-k8s/base/terraform.tfstate"
-terraform apply -var="jwt_secret=$JWT_SECRET"
+terraform init -backend-config="key=infra-k8s/staging/base/terraform.tfstate"
+terraform apply -var="ambiente=staging"
 
 cd ../cluster
-terraform init -backend-config="key=infra-k8s/cluster/terraform.tfstate"
-terraform apply
+terraform init -backend-config="key=infra-k8s/staging/cluster/terraform.tfstate"
+terraform apply -var="ambiente=staging"
 ```
 
 Verificação sem credenciais, em cada stack:
@@ -140,7 +154,7 @@ terraform apply
 terraform apply -var="enable_lambda_routes=true" -var="aplicar_manifests=true"
 ```
 
-**É o passo que mais confunde quem clona pela primeira vez.** Pela pipeline, `enable_lambda_routes` é a variável de repositório `ENABLE_LAMBDA_ROUTES` ou o input do `workflow_dispatch`.
+**É o passo que mais confunde quem clona pela primeira vez.** Pela pipeline, `enable_lambda_routes` e `aplicar_manifests` são inputs do `workflow_dispatch`, disparado na branch do ambiente.
 
 ### Ordem entre repositórios
 
@@ -159,7 +173,7 @@ O passo 3 antes do 4 é obrigatório: a Lambda consulta `clientes.status`, colun
 
 ### Ordem do destroy
 
-Workflow **Destroy AWS** em cada repositório, na ordem inversa:
+Workflow **Destroy AWS** em cada repositório, disparado na branch do ambiente, na ordem inversa:
 
 ```
 1. oficina-auth-lambda  (ENIs da Lambda prendem subnet e security group)

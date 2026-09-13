@@ -56,11 +56,11 @@ resource "aws_vpc_security_group_ingress_rule" "nodeport_do_nlb" {
 }
 
 resource "aws_security_group" "vpc_link" {
-  name        = "oficina-api-vpclink-sg"
+  name        = "${local.nome}-vpclink-sg"
   description = "VPC Link do API Gateway ate o NLB interno"
   vpc_id      = aws_vpc.oficina.id
 
-  tags = { Name = "oficina-api-vpclink-sg" }
+  tags = { Name = "${local.nome}-vpclink-sg" }
 }
 
 resource "aws_vpc_security_group_egress_rule" "vpc_link_saida" {

@@ -21,7 +21,7 @@ jobs:
   destroy:
     name: Destroy (${{ inputs.stack }})
     runs-on: ubuntu-latest
-    environment: prod
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
     defaults:
       run:
         working-directory: ${{ inputs.stack }}
@@ -48,7 +48,7 @@ jobs:
         if: inputs.stack == 'base'
         working-directory: ${{ github.workspace }}
         run: |
-          EKS=$(aws eks list-clusters --query "clusters[?starts_with(@, 'oficina-api')]" --output text)
+          EKS=$(aws eks list-clusters --query "clusters[?@=='oficina-api-${AMBIENTE}']" --output text)
           if [ -n "$EKS" ]; then
             echo "::error::Destrua o stack cluster antes da base. Ainda de pé: $EKS"
             exit 1
@@ -58,12 +58,11 @@ jobs:
         with:
           terraform_version: "1.9.8"
 
-      - run: terraform init -backend-config="key=infra-k8s/${STACK}/terraform.tfstate"
+      - run: terraform init -backend-config="key=infra-k8s/${AMBIENTE}/${STACK}/terraform.tfstate"
 
       - name: Destroy
         env:
           TF_VAR_ambiente: ${{ env.AMBIENTE }}
-          TF_VAR_jwt_secret: ${{ secrets.TF_VAR_JWT_SECRET }}
           TF_VAR_ci_role_principal_arn: ${{ vars.API_DEPLOY_ROLE_ARN }}
           TF_VAR_cluster_admin_principal_arn: ${{ secrets.AWS_CLUSTER_ADMIN_ARN }}
           TF_VAR_newrelic_account_id: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
@@ -74,6 +73,6 @@ jobs:
         if: inputs.stack == 'cluster'
         working-directory: ${{ github.workspace }}
         run: |
-          echo "EKS:  $(aws eks list-clusters --query 'clusters' --output text)"
-          echo "NAT:  $(aws ec2 describe-instances --filters Name=tag:Name,Values=oficina-api-nat Name=instance-state-name,Values=running --query 'Reservations[].Instances[].InstanceId' --output text)"
-          echo "NLB:  $(aws elbv2 describe-load-balancers --query "LoadBalancers[?contains(LoadBalancerName,'oficina')].LoadBalancerName" --output text)"
+          echo "EKS:  $(aws eks list-clusters --query "clusters[?@=='oficina-api-${AMBIENTE}']" --output text)"
+          echo "NAT:  $(aws ec2 describe-instances --filters Name=tag:Name,Values=oficina-api-${AMBIENTE}-nat Name=instance-state-name,Values=running --query 'Reservations[].Instances[].InstanceId' --output text)"
+          echo "NLB:  $(aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='oficina-api-nlb-${AMBIENTE}'].LoadBalancerName" --output text)"
