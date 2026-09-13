@@ -62,6 +62,7 @@ resource "local_file" "app_configmap" {
       PORT                                = "8080"
       SPRING_PROFILES_ACTIVE              = "k8s"
       ENV                                 = var.ambiente
+      NEW_RELIC_APP_NAME                  = local.nome
       DB_URL                              = local.db_url
       NOTIFICACAO_CANAL                   = "smtp"
       SMTP_HOST                           = "oficina-mailhog"

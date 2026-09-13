@@ -31,8 +31,6 @@ spec:
           env:
             - name: JAVA_TOOL_OPTIONS
               value: "-XX:MaxRAMPercentage=70.0"
-            - name: NEW_RELIC_APP_NAME
-              value: "oficina-api (prod)"
             # Fluent Bit da integração Kubernetes é quem encaminha log. Ligar os
             # dois envia cada linha duas vezes e queima o free tier pela metade
             # (Aula 08, SPEC-03 §4).
