@@ -55,6 +55,18 @@ jobs:
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false
       - run: terraform validate
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: v0.55.0
+      - run: tflint --init --config "$GITHUB_WORKSPACE/.tflint.hcl"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - run: tflint --format compact --config "$GITHUB_WORKSPACE/.tflint.hcl"
+      - name: Checkov
+        working-directory: ${{ github.workspace }}
+        env:
+          STACK_DIR: ${{ matrix.stack }}
+        run: docker run --rm -v "$PWD:/repo" -w /repo bridgecrew/checkov:3.2.334 -d "$STACK_DIR" --config-file .checkov.yaml
 
   bootstrap:
     name: Bootstrap do backend
