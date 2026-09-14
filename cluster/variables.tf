@@ -122,3 +122,10 @@ variable "aplicar_manifests" {
   type        = bool
   default     = false
 }
+
+variable "funcionario_seed_cpf" {
+  description = "CPF do funcionário cadastrado pela migration de seed; aplicado somente em homologação."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
