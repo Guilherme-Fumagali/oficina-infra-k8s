@@ -105,9 +105,9 @@ resource "aws_apigatewayv2_stage" "principal" {
   }
 
   dynamic "route_settings" {
-    for_each = var.enable_lambda_routes ? [1] : []
+    for_each = var.enable_lambda_routes ? ["POST /auth", "POST /auth/funcionarios"] : []
     content {
-      route_key              = "POST /auth"
+      route_key              = route_settings.value
       throttling_rate_limit  = 10
       throttling_burst_limit = 20
     }
@@ -198,6 +198,14 @@ resource "aws_apigatewayv2_route" "auth" {
 
   api_id    = aws_apigatewayv2_api.oficina.id
   route_key = "POST /auth"
+  target    = "integrations/${aws_apigatewayv2_integration.auth[0].id}"
+}
+
+resource "aws_apigatewayv2_route" "auth_funcionarios" {
+  count = var.enable_lambda_routes ? 1 : 0
+
+  api_id    = aws_apigatewayv2_api.oficina.id
+  route_key = "POST /auth/funcionarios"
   target    = "integrations/${aws_apigatewayv2_integration.auth[0].id}"
 }
 

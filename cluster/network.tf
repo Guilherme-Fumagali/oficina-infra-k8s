@@ -9,6 +9,12 @@ resource "aws_vpc" "oficina" {
   }
 }
 
+resource "aws_default_security_group" "padrao" {
+  vpc_id = aws_vpc.oficina.id
+
+  tags = { Name = "${local.nome}-default-sg" }
+}
+
 resource "aws_internet_gateway" "oficina" {
   vpc_id = aws_vpc.oficina.id
   tags   = { Name = "${local.nome}-igw" }
@@ -86,6 +92,11 @@ resource "aws_instance" "nat" {
   vpc_security_group_ids = [aws_security_group.nat.id]
 
   source_dest_check = false
+  ebs_optimized     = true
+
+  root_block_device {
+    encrypted = true
+  }
 
   user_data = <<-EOT
     #!/bin/bash

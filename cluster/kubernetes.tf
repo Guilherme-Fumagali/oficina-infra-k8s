@@ -95,6 +95,7 @@ resource "local_file" "app_secret" {
       DB_PASS               = data.aws_ssm_parameter.db_password[0].value
       JWT_SECRET            = data.aws_ssm_parameter.jwt_secret[0].value
       NEW_RELIC_LICENSE_KEY = var.enable_newrelic ? data.aws_ssm_parameter.newrelic_license_key[0].value : ""
+      FUNCIONARIO_SEED_CPF  = var.ambiente == "staging" ? var.funcionario_seed_cpf : ""
     }
   })
 }
@@ -119,6 +120,7 @@ resource "null_resource" "aplicar_manifests" {
       kubectl apply -f ${local.manifests_dir}/metrics-server/components.yaml
       kubectl apply -f ${local_file.app_configmap[0].filename}
       kubectl apply -f ${local_file.app_secret[0].filename}
+      kubectl apply -f ${local.manifests_dir}/mailhog/
 
       sed 's|ECR_REPOSITORY_URL|${data.aws_ssm_parameter.ecr_repository_url.value}|' \
         ${local.manifests_dir}/app/deployment.yaml | kubectl apply -f -
