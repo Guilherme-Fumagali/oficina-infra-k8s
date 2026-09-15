@@ -22,9 +22,9 @@ variable "kubernetes_version" {
 }
 
 variable "node_instance_types" {
-  description = "Tipos de instância dos nós. t3.small = menor custo com folga para kubelet + aplicação."
+  description = "Tipos de instância dos nós. t3.medium comporta as 4 réplicas do HPA e a integração Kubernetes do New Relic em 2 nós."
   type        = list(string)
-  default     = ["t3.small"]
+  default     = ["t3.medium"]
 }
 
 variable "vpc_cidr" {
@@ -128,4 +128,10 @@ variable "funcionario_seed_cpf" {
   type        = string
   sensitive   = true
   default     = ""
+}
+
+variable "newrelic_bundle_versao" {
+  description = "Versão do chart nri-bundle (integração Kubernetes do New Relic: métricas de nós, pods e deployments)."
+  type        = string
+  default     = "8.0.24"
 }

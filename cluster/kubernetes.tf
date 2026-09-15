@@ -59,19 +59,20 @@ resource "local_file" "app_configmap" {
       namespace = "oficina"
     }
     data = {
-      PORT                                = "8080"
-      SPRING_PROFILES_ACTIVE              = "k8s"
-      ENV                                 = var.ambiente
-      NEW_RELIC_APP_NAME                  = local.nome
-      DB_URL                              = local.db_url
-      NOTIFICACAO_CANAL                   = "smtp"
-      SMTP_HOST                           = "oficina-mailhog"
-      SMTP_PORT                           = "1025"
-      MAIL_FROM                           = "oficina@example.com"
-      MAIL_BASE_URL                       = aws_apigatewayv2_stage.principal.invoke_url
-      MANAGEMENT_TRACING_ENABLED          = "true"
-      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = "https://otlp.nr-data.net/v1/metrics"
-      METRICS_EXPORT_STEP                 = "60s"
+      PORT                                   = "8080"
+      SPRING_PROFILES_ACTIVE                 = "k8s"
+      ENV                                    = var.ambiente
+      NEW_RELIC_APP_NAME                     = local.nome
+      DB_URL                                 = local.db_url
+      NOTIFICACAO_CANAL                      = "smtp"
+      SMTP_HOST                              = "oficina-mailhog"
+      SMTP_PORT                              = "1025"
+      MAIL_FROM                              = "oficina@example.com"
+      MAIL_BASE_URL                          = aws_apigatewayv2_stage.principal.invoke_url
+      MANAGEMENT_TRACING_ENABLED             = "true"
+      MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED = "false"
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT    = "https://otlp.nr-data.net/v1/metrics"
+      METRICS_EXPORT_STEP                    = "60s"
     }
   })
 }
@@ -131,4 +132,37 @@ resource "null_resource" "aplicar_manifests" {
   }
 
   depends_on = [aws_eks_node_group.oficina]
+}
+
+resource "null_resource" "newrelic_kubernetes" {
+  count = var.aplicar_manifests && var.enable_newrelic ? 1 : 0
+
+  triggers = {
+    cluster     = aws_eks_cluster.oficina.name
+    chart       = var.newrelic_bundle_versao
+    values_sha  = filesha256("${path.module}/k8s/newrelic/values.yaml")
+    license_sha = sha256(data.aws_ssm_parameter.newrelic_license_key[0].value)
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    environment = {
+      NEW_RELIC_LICENSE_KEY = data.aws_ssm_parameter.newrelic_license_key[0].value
+    }
+    command = <<-EOT
+      set -euo pipefail
+      aws eks update-kubeconfig --name ${aws_eks_cluster.oficina.name} --region ${var.aws_region}
+
+      helm repo add newrelic https://helm-charts.newrelic.com --force-update
+      helm upgrade --install newrelic-bundle newrelic/nri-bundle \
+        --version ${var.newrelic_bundle_versao} \
+        --namespace newrelic --create-namespace \
+        -f ${path.module}/k8s/newrelic/values.yaml \
+        --set global.licenseKey="$NEW_RELIC_LICENSE_KEY" \
+        --set global.cluster=${aws_eks_cluster.oficina.name} \
+        --wait --timeout 10m
+    EOT
+  }
+
+  depends_on = [null_resource.aplicar_manifests]
 }

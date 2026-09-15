@@ -38,7 +38,7 @@ Este repositório é responsável pela rede. Os demais repositórios obtêm VPC,
    │  subnet privada 10.0.11.0/24 · 10.0.12.0/24                        │
    │     ├── NLB interno ─────────────────┘                             │
    │     │      └──▶ NodePort 30080 ──▶ EKS ──▶ oficina-api (HPA 2–4)   │
-   │     ├── nós EKS (t3.small ×2, sem IP público)                      │
+   │     ├── nós EKS (t3.medium ×2, sem IP público)                     │
    │     └── RDS (repositório oficina-infra-db)                         │
    │                                                                    │
    │  S3 gateway endpoint ──▶ camadas de imagem do ECR                  │
@@ -63,10 +63,10 @@ Este repositório é responsável pela rede. Os demais repositórios obtêm VPC,
 | Grupo | Recursos |
 |---|---|
 | Rede | VPC, 2 subnets públicas, 2 privadas, internet gateway, NAT instance `t4g.nano`, route tables, S3 gateway endpoint, security group da Lambda |
-| Cluster | EKS 1.36, node group `t3.small` ×2 (máximo 4) em subnet privada, IAM roles e access entries |
+| Cluster | EKS 1.36, node group `t3.medium` ×2 (máximo 4) em subnet privada, IAM roles e access entries |
 | Registry | ECR `oficina-api-<ambiente>` com retenção das 10 imagens mais recentes |
 | Borda | HTTP API, VPC Link, NLB interno, target group no NodePort 30080, Lambda authorizer, rotas `POST /auth` e `POST /auth/funcionarios` com throttling de 10 req/s e stage com access log |
-| Observabilidade | 6 condições de alerta, monitor sintético e 2 dashboards |
+| Observabilidade | integração Kubernetes do New Relic (chart `nri-bundle`), 6 condições de alerta, monitor sintético e 2 dashboards |
 | Orçamento | AWS Budget de US$ 50 com alerta de previsão |
 | Integração | 12 parâmetros no SSM para os demais repositórios |
 
@@ -87,7 +87,7 @@ Os ambientes não compartilham recursos, state, parâmetros ou segredos. A demon
 | Stack | Recursos | Custo | Aplicação |
 |---|---|---|---|
 | `base/` | ECR e parâmetros `ecr-repository-url`, `jwt-secret` e `newrelic-license-key` | centavos por mês | automática no push em `develop`; com aprovação no push em `main` |
-| `cluster/` | VPC, NAT, EKS, NLB, API Gateway, New Relic e manifests | cerca de US$ 0,20 por hora | somente por `workflow_dispatch` na branch do ambiente |
+| `cluster/` | VPC, NAT, EKS, NLB, API Gateway, New Relic e manifests | cerca de US$ 0,24 por hora | somente por `workflow_dispatch` na branch do ambiente |
 
 A stack `base` permanece provisionada, pois o pipeline da aplicação publica imagens no ECR. A stack `cluster` é criada para testes e demonstrações e destruída em seguida. O `jwt-secret` é gerado pelo Terraform (`random_password`), com um valor por ambiente.
 
@@ -237,18 +237,20 @@ Dashboards e alertas são declarados em Terraform, conforme recomendado na Aula 
 
 - **Dashboard de negócio:** volume diário de ordens de serviço, tempo médio por status e erros de integração, a partir de métricas customizadas da aplicação.
 - **Dashboard técnico:** latência por percentil, taxa de erros, recursos por pod, réplicas do HPA e Apdex.
+- **Integração Kubernetes:** o chart `nri-bundle`, com a configuração de [`cluster/k8s/newrelic/values.yaml`](cluster/k8s/newrelic/values.yaml), é instalado por Helm no namespace `newrelic` junto com os manifests e envia as métricas de nós, pods e deployments usadas no dashboard técnico e no alerta de memória.
+- **Logs:** encaminhados pelo agente Java, com `trace.id` e `span.id` da transação, o que liga cada linha ao trace no APM. O Fluent Bit do chart fica desligado para não duplicar a ingestão.
 - **Alertas:** seis condições no padrão `AWS-OficinaAPI-<Ambiente>-<Recurso>-<Sintoma>-<Severidade>`, cada uma com link para o runbook correspondente em `tech-challenge-1/docs/runbooks`.
 
 A criação exige `ENABLE_NEWRELIC=true` e as credenciais do New Relic. Sem elas, o Terraform aplica os demais recursos normalmente.
 
 ## Custo
 
-Com a stack `cluster` provisionada, o custo é de cerca de US$ 0,20 por hora; o control plane do EKS custa US$ 73 por mês e não tem nível gratuito.
+Com a stack `cluster` provisionada, o custo é de cerca de US$ 0,24 por hora; o control plane do EKS custa US$ 73 por mês e não tem nível gratuito.
 
 | Cenário | Custo |
 |---|---|
-| Sessão de trabalho de 4 h | US$ 0,79 |
-| 10 sessões ao longo da fase | US$ 7,92 |
-| Mês completo em operação contínua | ~US$ 145 |
+| Sessão de trabalho de 4 h | US$ 0,96 |
+| 10 sessões ao longo da fase | US$ 9,58 |
+| Mês completo em operação contínua | ~US$ 175 |
 
 O ambiente é destruído ao final de cada sessão. O AWS Budget emite alerta com base na previsão de gasto.

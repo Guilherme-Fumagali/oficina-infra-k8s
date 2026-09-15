@@ -48,10 +48,16 @@ curl http://localhost:8080/actuator/health
 
 ## Teste de carga e HPA
 
+O k6 roda em um pod no próprio cluster, para que a carga chegue aos pods sem passar pelo throttling do API Gateway. Com `TOKEN`, cada iteração consulta `GET /api/ordens`, que acessa o banco; sem token, consulta `/actuator/health`.
+
 ```
 kubectl get hpa -n oficina -w
-k6 run -e BASE_URL=http://localhost:8080 loadtest/k6-script.js
+
+kubectl run k6 -i --rm --restart=Never -n oficina --image=grafana/k6:0.57.0 \
+  -- run -e TOKEN="$TOKEN" - < loadtest/k6-script.js
 ```
+
+O perfil sobe para 30 usuários virtuais em 1 minuto, mantém por 3 minutos e desce em 1 minuto.
 
 ## Acesso
 
