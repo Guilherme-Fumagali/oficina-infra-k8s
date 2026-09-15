@@ -59,19 +59,20 @@ resource "local_file" "app_configmap" {
       namespace = "oficina"
     }
     data = {
-      PORT                                = "8080"
-      SPRING_PROFILES_ACTIVE              = "k8s"
-      ENV                                 = var.ambiente
-      NEW_RELIC_APP_NAME                  = local.nome
-      DB_URL                              = local.db_url
-      NOTIFICACAO_CANAL                   = "smtp"
-      SMTP_HOST                           = "oficina-mailhog"
-      SMTP_PORT                           = "1025"
-      MAIL_FROM                           = "oficina@example.com"
-      MAIL_BASE_URL                       = aws_apigatewayv2_stage.principal.invoke_url
-      MANAGEMENT_TRACING_ENABLED          = "true"
-      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = "https://otlp.nr-data.net/v1/metrics"
-      METRICS_EXPORT_STEP                 = "60s"
+      PORT                                   = "8080"
+      SPRING_PROFILES_ACTIVE                 = "k8s"
+      ENV                                    = var.ambiente
+      NEW_RELIC_APP_NAME                     = local.nome
+      DB_URL                                 = local.db_url
+      NOTIFICACAO_CANAL                      = "smtp"
+      SMTP_HOST                              = "oficina-mailhog"
+      SMTP_PORT                              = "1025"
+      MAIL_FROM                              = "oficina@example.com"
+      MAIL_BASE_URL                          = aws_apigatewayv2_stage.principal.invoke_url
+      MANAGEMENT_TRACING_ENABLED             = "true"
+      MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED = "false"
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT    = "https://otlp.nr-data.net/v1/metrics"
+      METRICS_EXPORT_STEP                    = "60s"
     }
   })
 }
