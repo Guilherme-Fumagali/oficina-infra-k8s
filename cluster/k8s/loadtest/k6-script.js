@@ -1,18 +1,22 @@
 import http from "k6/http";
-import { sleep } from "k6";
+import { check, sleep } from "k6";
 
-// Gera carga crescente para demonstrar o scale-up/scale-down do HPA.
 export const options = {
   stages: [
-    { duration: "1m", target: 50 },
-    { duration: "3m", target: 50 },
+    { duration: "1m", target: 30 },
+    { duration: "3m", target: 30 },
     { duration: "1m", target: 0 },
   ],
 };
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:8080";
+const BASE_URL = __ENV.BASE_URL || "http://oficina-api.oficina.svc.cluster.local";
+const TOKEN = __ENV.TOKEN;
 
 export default function () {
-  http.get(`${BASE_URL}/actuator/health`);
+  const cabecalhos = TOKEN ? { headers: { Authorization: `Bearer ${TOKEN}` } } : {};
+  const resposta = TOKEN
+    ? http.get(`${BASE_URL}/api/ordens`, cabecalhos)
+    : http.get(`${BASE_URL}/actuator/health`);
+  check(resposta, { "status 200": (r) => r.status === 200 });
   sleep(0.2);
 }
