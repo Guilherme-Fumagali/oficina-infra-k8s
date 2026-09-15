@@ -38,6 +38,11 @@ data "aws_ssm_parameter" "db_password" {
 locals {
   manifests_dir = "${path.module}/k8s"
 
+  manifests_sha = sha256(join("", [
+    for arquivo in sort(fileset("${path.module}/k8s", "**/*.yaml")) :
+    filesha256("${path.module}/k8s/${arquivo}") if !endswith(arquivo, ".generated.yaml")
+  ]))
+
   db_url = var.aplicar_manifests ? format(
     "jdbc:postgresql://%s/%s",
     data.aws_ssm_parameter.db_endpoint[0].insecure_value,
@@ -105,10 +110,11 @@ resource "null_resource" "aplicar_manifests" {
   count = var.aplicar_manifests ? 1 : 0
 
   triggers = {
-    configmap  = local_file.app_configmap[0].content
-    secret_sha = sha256(local_file.app_secret[0].content)
-    imagem     = data.aws_ssm_parameter.ecr_repository_url.insecure_value
-    cluster    = aws_eks_cluster.oficina.name
+    configmap     = local_file.app_configmap[0].content
+    secret_sha    = sha256(local_file.app_secret[0].content)
+    imagem        = data.aws_ssm_parameter.ecr_repository_url.insecure_value
+    cluster       = aws_eks_cluster.oficina.name
+    manifests_sha = local.manifests_sha
   }
 
   provisioner "local-exec" {
