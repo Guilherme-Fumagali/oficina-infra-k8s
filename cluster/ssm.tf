@@ -52,6 +52,6 @@ resource "aws_ssm_parameter" "api_gateway_url" {
   name        = "/oficina/${var.ambiente}/api-gateway-url"
   description = "URL publica da API — e o link do deploy ativo da entrega"
   type        = "String"
-  value       = aws_apigatewayv2_stage.principal.invoke_url
+  value       = local.api_url
 }
 
