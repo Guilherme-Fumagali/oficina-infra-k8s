@@ -146,12 +146,11 @@ resource "null_resource" "newrelic_kubernetes" {
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
-    environment = {
-      NEW_RELIC_LICENSE_KEY = data.aws_ssm_parameter.newrelic_license_key[0].value
-    }
-    command = <<-EOT
+    command     = <<-EOT
       set -euo pipefail
       aws eks update-kubeconfig --name ${aws_eks_cluster.oficina.name} --region ${var.aws_region}
+      NEW_RELIC_LICENSE_KEY=$(aws ssm get-parameter --name ${data.aws_ssm_parameter.newrelic_license_key[0].name} \
+        --with-decryption --query Parameter.Value --output text --region ${var.aws_region})
 
       helm repo add newrelic https://helm-charts.newrelic.com --force-update
       helm upgrade --install newrelic-bundle newrelic/nri-bundle \
