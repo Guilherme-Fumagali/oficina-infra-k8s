@@ -98,13 +98,19 @@ resource "aws_instance" "nat" {
     encrypted = true
   }
 
-  user_data = <<-EOT
+  user_data_replace_on_change = true
+  user_data                   = <<-EOT
     #!/bin/bash
     set -euo pipefail
+    fallocate -l 1G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+
     sysctl -w net.ipv4.ip_forward=1
     echo 'net.ipv4.ip_forward = 1' > /etc/sysctl.d/99-nat.conf
 
-    dnf install -y iptables-services
+    dnf install -y --setopt=install_weak_deps=False iptables-services
     IFACE=$(ip -o -4 route show to default | awk '{print $5}')
     iptables -t nat -A POSTROUTING -o "$IFACE" -j MASQUERADE
     iptables -F FORWARD
