@@ -22,9 +22,9 @@ variable "kubernetes_version" {
 }
 
 variable "node_instance_types" {
-  description = "Tipos de instância dos nós. t3.small = menor custo com folga para kubelet + aplicação."
+  description = "Tipos de instância dos nós. t3.medium comporta as 4 réplicas do HPA e a integração Kubernetes do New Relic em 2 nós."
   type        = list(string)
-  default     = ["t3.small"]
+  default     = ["t3.medium"]
 }
 
 variable "vpc_cidr" {
