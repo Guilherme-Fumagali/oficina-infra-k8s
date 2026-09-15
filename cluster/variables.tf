@@ -129,3 +129,9 @@ variable "funcionario_seed_cpf" {
   sensitive   = true
   default     = ""
 }
+
+variable "newrelic_bundle_versao" {
+  description = "Versão do chart nri-bundle (integração Kubernetes do New Relic: métricas de nós, pods e deployments)."
+  type        = string
+  default     = "8.0.24"
+}
