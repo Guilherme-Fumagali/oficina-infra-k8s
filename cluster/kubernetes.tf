@@ -40,8 +40,8 @@ locals {
 
   db_url = var.aplicar_manifests ? format(
     "jdbc:postgresql://%s/%s",
-    data.aws_ssm_parameter.db_endpoint[0].value,
-    data.aws_ssm_parameter.db_name[0].value,
+    data.aws_ssm_parameter.db_endpoint[0].insecure_value,
+    data.aws_ssm_parameter.db_name[0].insecure_value,
   ) : ""
 }
 
@@ -107,7 +107,7 @@ resource "null_resource" "aplicar_manifests" {
   triggers = {
     configmap  = local_file.app_configmap[0].content
     secret_sha = sha256(local_file.app_secret[0].content)
-    imagem     = data.aws_ssm_parameter.ecr_repository_url.value
+    imagem     = data.aws_ssm_parameter.ecr_repository_url.insecure_value
     cluster    = aws_eks_cluster.oficina.name
   }
 
@@ -123,7 +123,7 @@ resource "null_resource" "aplicar_manifests" {
       kubectl apply -f ${local_file.app_secret[0].filename}
       kubectl apply -f ${local.manifests_dir}/mailhog/
 
-      sed 's|ECR_REPOSITORY_URL|${data.aws_ssm_parameter.ecr_repository_url.value}|' \
+      sed 's|ECR_REPOSITORY_URL|${data.aws_ssm_parameter.ecr_repository_url.insecure_value}|' \
         ${local.manifests_dir}/app/deployment.yaml | kubectl apply -f -
 
       kubectl apply -f ${local.manifests_dir}/app/service.yaml
@@ -146,12 +146,11 @@ resource "null_resource" "newrelic_kubernetes" {
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
-    environment = {
-      NEW_RELIC_LICENSE_KEY = data.aws_ssm_parameter.newrelic_license_key[0].value
-    }
-    command = <<-EOT
+    command     = <<-EOT
       set -euo pipefail
       aws eks update-kubeconfig --name ${aws_eks_cluster.oficina.name} --region ${var.aws_region}
+      NEW_RELIC_LICENSE_KEY=$(aws ssm get-parameter --name ${data.aws_ssm_parameter.newrelic_license_key[0].name} \
+        --with-decryption --query Parameter.Value --output text --region ${var.aws_region})
 
       helm repo add newrelic https://helm-charts.newrelic.com --force-update
       helm upgrade --install newrelic-bundle newrelic/nri-bundle \
