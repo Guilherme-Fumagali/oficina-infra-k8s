@@ -96,7 +96,7 @@ resource "aws_cloudwatch_log_group" "apigw" {
 
 resource "aws_apigatewayv2_stage" "principal" {
   api_id      = aws_apigatewayv2_api.oficina.id
-  name        = var.ambiente
+  name        = "$default"
   auto_deploy = true
 
   default_route_settings {

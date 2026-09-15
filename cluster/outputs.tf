@@ -1,6 +1,6 @@
 output "api_gateway_url" {
   description = "URL publica da API — link do deploy ativo para a entrega."
-  value       = aws_apigatewayv2_stage.principal.invoke_url
+  value       = local.api_url
 }
 
 output "eks_cluster_name" {

@@ -68,7 +68,7 @@ resource "local_file" "app_configmap" {
       SMTP_HOST                              = "oficina-mailhog"
       SMTP_PORT                              = "1025"
       MAIL_FROM                              = "oficina@example.com"
-      MAIL_BASE_URL                          = aws_apigatewayv2_stage.principal.invoke_url
+      MAIL_BASE_URL                          = local.api_url
       MANAGEMENT_TRACING_ENABLED             = "true"
       MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED = "false"
       OTEL_EXPORTER_OTLP_METRICS_ENDPOINT    = "https://otlp.nr-data.net/v1/metrics"
