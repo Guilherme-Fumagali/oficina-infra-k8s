@@ -127,6 +127,11 @@ resource "aws_apigatewayv2_stage" "principal" {
       errorMessage       = "$context.error.message"
     })
   }
+
+  depends_on = [
+    aws_apigatewayv2_route.auth,
+    aws_apigatewayv2_route.auth_funcionarios,
+  ]
 }
 
 resource "aws_apigatewayv2_integration" "cluster" {
