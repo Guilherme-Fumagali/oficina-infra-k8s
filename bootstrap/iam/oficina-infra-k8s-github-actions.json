@@ -223,6 +223,18 @@
           ]
         }
       }
+    },
+    {
+      "Sid": "ConsultaServiceLinkedRoles",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": [
+        "arn:aws:iam::ACCOUNT_ID:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
+        "arn:aws:iam::ACCOUNT_ID:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS",
+        "arn:aws:iam::ACCOUNT_ID:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup",
+        "arn:aws:iam::ACCOUNT_ID:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing",
+        "arn:aws:iam::ACCOUNT_ID:role/aws-service-role/ops.apigateway.amazonaws.com/AWSServiceRoleForAPIGateway"
+      ]
     }
   ]
 }
