@@ -40,8 +40,8 @@ locals {
 
   db_url = var.aplicar_manifests ? format(
     "jdbc:postgresql://%s/%s",
-    data.aws_ssm_parameter.db_endpoint[0].value,
-    data.aws_ssm_parameter.db_name[0].value,
+    data.aws_ssm_parameter.db_endpoint[0].insecure_value,
+    data.aws_ssm_parameter.db_name[0].insecure_value,
   ) : ""
 }
 
@@ -107,7 +107,7 @@ resource "null_resource" "aplicar_manifests" {
   triggers = {
     configmap  = local_file.app_configmap[0].content
     secret_sha = sha256(local_file.app_secret[0].content)
-    imagem     = data.aws_ssm_parameter.ecr_repository_url.value
+    imagem     = data.aws_ssm_parameter.ecr_repository_url.insecure_value
     cluster    = aws_eks_cluster.oficina.name
   }
 
@@ -123,7 +123,7 @@ resource "null_resource" "aplicar_manifests" {
       kubectl apply -f ${local_file.app_secret[0].filename}
       kubectl apply -f ${local.manifests_dir}/mailhog/
 
-      sed 's|ECR_REPOSITORY_URL|${data.aws_ssm_parameter.ecr_repository_url.value}|' \
+      sed 's|ECR_REPOSITORY_URL|${data.aws_ssm_parameter.ecr_repository_url.insecure_value}|' \
         ${local.manifests_dir}/app/deployment.yaml | kubectl apply -f -
 
       kubectl apply -f ${local.manifests_dir}/app/service.yaml

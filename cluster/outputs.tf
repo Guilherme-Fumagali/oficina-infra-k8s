@@ -12,7 +12,7 @@ output "eks_cluster_endpoint" {
 }
 
 output "ecr_repository_url" {
-  value = data.aws_ssm_parameter.ecr_repository_url.value
+  value = data.aws_ssm_parameter.ecr_repository_url.insecure_value
 }
 
 output "nlb_dns_name" {

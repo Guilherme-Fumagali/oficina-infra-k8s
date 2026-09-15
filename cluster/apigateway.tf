@@ -155,7 +155,7 @@ resource "aws_apigatewayv2_integration" "auth" {
 
   api_id                 = aws_apigatewayv2_api.oficina.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = data.aws_ssm_parameter.auth_lambda_arn[0].value
+  integration_uri        = data.aws_ssm_parameter.auth_lambda_arn[0].insecure_value
   payload_format_version = "2.0"
 }
 
@@ -164,7 +164,7 @@ resource "aws_apigatewayv2_authorizer" "jwt" {
 
   api_id                            = aws_apigatewayv2_api.oficina.id
   authorizer_type                   = "REQUEST"
-  authorizer_uri                    = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${data.aws_ssm_parameter.authorizer_lambda_arn[0].value}/invocations"
+  authorizer_uri                    = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${data.aws_ssm_parameter.authorizer_lambda_arn[0].insecure_value}/invocations"
   identity_sources                  = ["$request.header.Authorization"]
   name                              = "oficina-jwt-authorizer"
   authorizer_payload_format_version = "2.0"
@@ -178,7 +178,7 @@ resource "aws_lambda_permission" "auth" {
 
   statement_id  = "AllowAPIGatewayInvokeAuth"
   action        = "lambda:InvokeFunction"
-  function_name = data.aws_ssm_parameter.auth_lambda_arn[0].value
+  function_name = data.aws_ssm_parameter.auth_lambda_arn[0].insecure_value
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.oficina.execution_arn}/*/*"
 }
@@ -188,7 +188,7 @@ resource "aws_lambda_permission" "authorizer" {
 
   statement_id  = "AllowAPIGatewayInvokeAuthorizer"
   action        = "lambda:InvokeFunction"
-  function_name = data.aws_ssm_parameter.authorizer_lambda_arn[0].value
+  function_name = data.aws_ssm_parameter.authorizer_lambda_arn[0].insecure_value
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.oficina.execution_arn}/*"
 }
