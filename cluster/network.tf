@@ -9,6 +9,12 @@ resource "aws_vpc" "oficina" {
   }
 }
 
+resource "aws_default_security_group" "padrao" {
+  vpc_id = aws_vpc.oficina.id
+
+  tags = { Name = "${local.nome}-default-sg" }
+}
+
 resource "aws_internet_gateway" "oficina" {
   vpc_id = aws_vpc.oficina.id
   tags   = { Name = "${local.nome}-igw" }
@@ -86,14 +92,25 @@ resource "aws_instance" "nat" {
   vpc_security_group_ids = [aws_security_group.nat.id]
 
   source_dest_check = false
+  ebs_optimized     = true
 
-  user_data = <<-EOT
+  root_block_device {
+    encrypted = true
+  }
+
+  user_data_replace_on_change = true
+  user_data                   = <<-EOT
     #!/bin/bash
     set -euo pipefail
+    fallocate -l 1G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+
     sysctl -w net.ipv4.ip_forward=1
     echo 'net.ipv4.ip_forward = 1' > /etc/sysctl.d/99-nat.conf
 
-    dnf install -y iptables-services
+    dnf install -y --setopt=install_weak_deps=False iptables-services
     IFACE=$(ip -o -4 route show to default | awk '{print $5}')
     iptables -t nat -A POSTROUTING -o "$IFACE" -j MASQUERADE
     iptables -F FORWARD

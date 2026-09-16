@@ -96,7 +96,7 @@ resource "aws_cloudwatch_log_group" "apigw" {
 
 resource "aws_apigatewayv2_stage" "principal" {
   api_id      = aws_apigatewayv2_api.oficina.id
-  name        = var.ambiente
+  name        = "$default"
   auto_deploy = true
 
   default_route_settings {
@@ -105,9 +105,9 @@ resource "aws_apigatewayv2_stage" "principal" {
   }
 
   dynamic "route_settings" {
-    for_each = var.enable_lambda_routes ? [1] : []
+    for_each = var.enable_lambda_routes ? ["POST /auth", "POST /auth/funcionarios"] : []
     content {
-      route_key              = "POST /auth"
+      route_key              = route_settings.value
       throttling_rate_limit  = 10
       throttling_burst_limit = 20
     }
@@ -127,6 +127,11 @@ resource "aws_apigatewayv2_stage" "principal" {
       errorMessage       = "$context.error.message"
     })
   }
+
+  depends_on = [
+    aws_apigatewayv2_route.auth,
+    aws_apigatewayv2_route.auth_funcionarios,
+  ]
 }
 
 resource "aws_apigatewayv2_integration" "cluster" {
@@ -155,7 +160,7 @@ resource "aws_apigatewayv2_integration" "auth" {
 
   api_id                 = aws_apigatewayv2_api.oficina.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = data.aws_ssm_parameter.auth_lambda_arn[0].value
+  integration_uri        = data.aws_ssm_parameter.auth_lambda_arn[0].insecure_value
   payload_format_version = "2.0"
 }
 
@@ -164,7 +169,7 @@ resource "aws_apigatewayv2_authorizer" "jwt" {
 
   api_id                            = aws_apigatewayv2_api.oficina.id
   authorizer_type                   = "REQUEST"
-  authorizer_uri                    = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${data.aws_ssm_parameter.authorizer_lambda_arn[0].value}/invocations"
+  authorizer_uri                    = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${data.aws_ssm_parameter.authorizer_lambda_arn[0].insecure_value}/invocations"
   identity_sources                  = ["$request.header.Authorization"]
   name                              = "oficina-jwt-authorizer"
   authorizer_payload_format_version = "2.0"
@@ -178,7 +183,7 @@ resource "aws_lambda_permission" "auth" {
 
   statement_id  = "AllowAPIGatewayInvokeAuth"
   action        = "lambda:InvokeFunction"
-  function_name = data.aws_ssm_parameter.auth_lambda_arn[0].value
+  function_name = data.aws_ssm_parameter.auth_lambda_arn[0].insecure_value
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.oficina.execution_arn}/*/*"
 }
@@ -188,7 +193,7 @@ resource "aws_lambda_permission" "authorizer" {
 
   statement_id  = "AllowAPIGatewayInvokeAuthorizer"
   action        = "lambda:InvokeFunction"
-  function_name = data.aws_ssm_parameter.authorizer_lambda_arn[0].value
+  function_name = data.aws_ssm_parameter.authorizer_lambda_arn[0].insecure_value
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.oficina.execution_arn}/*"
 }
@@ -198,6 +203,14 @@ resource "aws_apigatewayv2_route" "auth" {
 
   api_id    = aws_apigatewayv2_api.oficina.id
   route_key = "POST /auth"
+  target    = "integrations/${aws_apigatewayv2_integration.auth[0].id}"
+}
+
+resource "aws_apigatewayv2_route" "auth_funcionarios" {
+  count = var.enable_lambda_routes ? 1 : 0
+
+  api_id    = aws_apigatewayv2_api.oficina.id
+  route_key = "POST /auth/funcionarios"
   target    = "integrations/${aws_apigatewayv2_integration.auth[0].id}"
 }
 

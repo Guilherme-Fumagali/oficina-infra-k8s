@@ -38,10 +38,15 @@ data "aws_ssm_parameter" "db_password" {
 locals {
   manifests_dir = "${path.module}/k8s"
 
+  manifests_sha = sha256(join("", [
+    for arquivo in sort(fileset("${path.module}/k8s", "**/*.yaml")) :
+    filesha256("${path.module}/k8s/${arquivo}") if !endswith(arquivo, ".generated.yaml")
+  ]))
+
   db_url = var.aplicar_manifests ? format(
     "jdbc:postgresql://%s/%s",
-    data.aws_ssm_parameter.db_endpoint[0].value,
-    data.aws_ssm_parameter.db_name[0].value,
+    data.aws_ssm_parameter.db_endpoint[0].insecure_value,
+    data.aws_ssm_parameter.db_name[0].insecure_value,
   ) : ""
 }
 
@@ -59,19 +64,20 @@ resource "local_file" "app_configmap" {
       namespace = "oficina"
     }
     data = {
-      PORT                                = "8080"
-      SPRING_PROFILES_ACTIVE              = "k8s"
-      ENV                                 = var.ambiente
-      NEW_RELIC_APP_NAME                  = local.nome
-      DB_URL                              = local.db_url
-      NOTIFICACAO_CANAL                   = "smtp"
-      SMTP_HOST                           = "oficina-mailhog"
-      SMTP_PORT                           = "1025"
-      MAIL_FROM                           = "oficina@example.com"
-      MAIL_BASE_URL                       = aws_apigatewayv2_stage.principal.invoke_url
-      MANAGEMENT_TRACING_ENABLED          = "true"
-      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = "https://otlp.nr-data.net/v1/metrics"
-      METRICS_EXPORT_STEP                 = "60s"
+      PORT                                   = "8080"
+      SPRING_PROFILES_ACTIVE                 = "k8s"
+      ENV                                    = var.ambiente
+      NEW_RELIC_APP_NAME                     = local.nome
+      DB_URL                                 = local.db_url
+      NOTIFICACAO_CANAL                      = "smtp"
+      SMTP_HOST                              = "oficina-mailhog"
+      SMTP_PORT                              = "1025"
+      MAIL_FROM                              = "oficina@example.com"
+      MAIL_BASE_URL                          = local.api_url
+      MANAGEMENT_TRACING_ENABLED             = "true"
+      MANAGEMENT_OTLP_TRACING_EXPORT_ENABLED = "false"
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT    = "https://otlp.nr-data.net/v1/metrics"
+      METRICS_EXPORT_STEP                    = "60s"
     }
   })
 }
@@ -95,6 +101,7 @@ resource "local_file" "app_secret" {
       DB_PASS               = data.aws_ssm_parameter.db_password[0].value
       JWT_SECRET            = data.aws_ssm_parameter.jwt_secret[0].value
       NEW_RELIC_LICENSE_KEY = var.enable_newrelic ? data.aws_ssm_parameter.newrelic_license_key[0].value : ""
+      FUNCIONARIO_SEED_CPF  = var.ambiente == "staging" ? var.funcionario_seed_cpf : ""
     }
   })
 }
@@ -103,10 +110,11 @@ resource "null_resource" "aplicar_manifests" {
   count = var.aplicar_manifests ? 1 : 0
 
   triggers = {
-    configmap  = local_file.app_configmap[0].content
-    secret_sha = sha256(local_file.app_secret[0].content)
-    imagem     = data.aws_ssm_parameter.ecr_repository_url.value
-    cluster    = aws_eks_cluster.oficina.name
+    configmap     = local_file.app_configmap[0].content
+    secret_sha    = sha256(local_file.app_secret[0].content)
+    imagem        = data.aws_ssm_parameter.ecr_repository_url.insecure_value
+    cluster       = aws_eks_cluster.oficina.name
+    manifests_sha = local.manifests_sha
   }
 
   provisioner "local-exec" {
@@ -119,8 +127,9 @@ resource "null_resource" "aplicar_manifests" {
       kubectl apply -f ${local.manifests_dir}/metrics-server/components.yaml
       kubectl apply -f ${local_file.app_configmap[0].filename}
       kubectl apply -f ${local_file.app_secret[0].filename}
+      kubectl apply -f ${local.manifests_dir}/mailhog/
 
-      sed 's|ECR_REPOSITORY_URL|${data.aws_ssm_parameter.ecr_repository_url.value}|' \
+      sed 's|ECR_REPOSITORY_URL|${data.aws_ssm_parameter.ecr_repository_url.insecure_value}|' \
         ${local.manifests_dir}/app/deployment.yaml | kubectl apply -f -
 
       kubectl apply -f ${local.manifests_dir}/app/service.yaml
@@ -129,4 +138,36 @@ resource "null_resource" "aplicar_manifests" {
   }
 
   depends_on = [aws_eks_node_group.oficina]
+}
+
+resource "null_resource" "newrelic_kubernetes" {
+  count = var.aplicar_manifests && var.enable_newrelic ? 1 : 0
+
+  triggers = {
+    cluster     = aws_eks_cluster.oficina.name
+    chart       = var.newrelic_bundle_versao
+    values_sha  = filesha256("${path.module}/k8s/newrelic/values.yaml")
+    license_sha = sha256(data.aws_ssm_parameter.newrelic_license_key[0].value)
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["/bin/bash", "-c"]
+    command     = <<-EOT
+      set -euo pipefail
+      aws eks update-kubeconfig --name ${aws_eks_cluster.oficina.name} --region ${var.aws_region}
+      NEW_RELIC_LICENSE_KEY=$(aws ssm get-parameter --name ${data.aws_ssm_parameter.newrelic_license_key[0].name} \
+        --with-decryption --query Parameter.Value --output text --region ${var.aws_region})
+
+      helm repo add newrelic https://helm-charts.newrelic.com --force-update
+      helm upgrade --install newrelic-bundle newrelic/nri-bundle \
+        --version ${var.newrelic_bundle_versao} \
+        --namespace newrelic --create-namespace \
+        -f ${path.module}/k8s/newrelic/values.yaml \
+        --set global.licenseKey="$NEW_RELIC_LICENSE_KEY" \
+        --set global.cluster=${aws_eks_cluster.oficina.name} \
+        --wait --timeout 10m
+    EOT
+  }
+
+  depends_on = [null_resource.aplicar_manifests]
 }

@@ -146,7 +146,7 @@ resource "newrelic_synthetics_monitor" "health" {
   type             = "SIMPLE"
   status           = "ENABLED"
   period           = "EVERY_5_MINUTES"
-  uri              = "${aws_apigatewayv2_stage.principal.invoke_url}/actuator/health"
+  uri              = "${local.api_url}/actuator/health"
   locations_public = ["AWS_US_EAST_1", "AWS_US_WEST_1", "AWS_SA_EAST_1"]
 
   treat_redirect_as_failure = true

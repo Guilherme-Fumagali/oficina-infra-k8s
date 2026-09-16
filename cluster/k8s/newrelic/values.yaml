@@ -1,0 +1,16 @@
+global:
+  lowDataMode: true
+
+newrelic-infrastructure:
+  privileged: true
+  controlPlane:
+    enabled: false
+
+kube-state-metrics:
+  enabled: true
+
+newrelic-logging:
+  enabled: false
+
+nri-metadata-injection:
+  enabled: false

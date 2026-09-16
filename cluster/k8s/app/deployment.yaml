@@ -31,11 +31,10 @@ spec:
           env:
             - name: JAVA_TOOL_OPTIONS
               value: "-XX:MaxRAMPercentage=70.0"
-            # Fluent Bit da integração Kubernetes é quem encaminha log. Ligar os
-            # dois envia cada linha duas vezes e queima o free tier pela metade
-            # (Aula 08, SPEC-03 §4).
             - name: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_ENABLED
-              value: "false"
+              value: "true"
+            - name: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_ENABLED
+              value: "true"
             - name: NEW_RELIC_LABELS
               value: "fase:tech-challenge-3"
           startupProbe:
