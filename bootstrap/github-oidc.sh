@@ -6,7 +6,7 @@ set -euo pipefail
 OWNER="${GITHUB_OWNER:-Guilherme-Fumagali}"
 REVISORES="${REVISORES:-Guilherme-Fumagali kanatu}"
 PROVIDER_HOST="token.actions.githubusercontent.com"
-BOUNDARY_NAME="oficina-lambda-boundary"
+BOUNDARIES=(oficina-lambda-boundary oficina-pod-boundary)
 IAM_DIR="$(cd "$(dirname "$0")" && pwd)/iam"
 
 REPOS=(
@@ -44,20 +44,20 @@ garantir_provider() {
 }
 
 garantir_boundary() {
-  local arn="arn:aws:iam::${ACCOUNT_ID}:policy/${BOUNDARY_NAME}" versao
+  local nome="$1" arn="arn:aws:iam::${ACCOUNT_ID}:policy/$1" versao
   if ! aws iam get-policy --policy-arn "$arn" >/dev/null 2>&1; then
-    log "Criando permissions boundary $BOUNDARY_NAME..."
-    aws iam create-policy --policy-name "$BOUNDARY_NAME" \
-      --policy-document "$(documento "$BOUNDARY_NAME")" >/dev/null
+    log "Criando permissions boundary $nome..."
+    aws iam create-policy --policy-name "$nome" \
+      --policy-document "$(documento "$nome")" >/dev/null
     return
   fi
-  log "Atualizando permissions boundary $BOUNDARY_NAME..."
+  log "Atualizando permissions boundary $nome..."
   for versao in $(aws iam list-policy-versions --policy-arn "$arn" \
       --query 'Versions[?!IsDefaultVersion].VersionId' --output text); do
     aws iam delete-policy-version --policy-arn "$arn" --version-id "$versao"
   done
   aws iam create-policy-version --policy-arn "$arn" --set-as-default \
-    --policy-document "$(documento "$BOUNDARY_NAME")" >/dev/null
+    --policy-document "$(documento "$nome")" >/dev/null
 }
 
 trust_policy() {
@@ -137,7 +137,9 @@ garantir_ambiente() {
 
 log "Conta AWS: $ACCOUNT_ID | Owner GitHub: $OWNER"
 garantir_provider
-garantir_boundary
+for boundary in "${BOUNDARIES[@]}"; do
+  garantir_boundary "$boundary"
+done
 
 for entrada in "${REPOS[@]}"; do
   IFS='|' read -r repo role <<<"$entrada"
