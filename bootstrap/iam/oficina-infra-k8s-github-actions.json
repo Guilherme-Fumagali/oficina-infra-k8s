@@ -112,6 +112,7 @@
       "Action": [
         "cloudformation:DescribeStacks",
         "cloudformation:ListStacks",
+        "rds:DescribeDBClusters",
         "rds:DescribeDBInstances"
       ],
       "Resource": "*"

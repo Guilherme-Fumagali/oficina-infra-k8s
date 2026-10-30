@@ -33,14 +33,15 @@ jobs:
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
-      - name: Conferir que banco e Lambda já foram destruídos
+      - name: Conferir que bancos e Lambda já foram destruídos
         if: inputs.stack == 'cluster'
         working-directory: ${{ github.workspace }}
         run: |
-          RDS=$(aws rds describe-db-instances --query "DBInstances[?DBInstanceIdentifier=='oficina-api-db-${AMBIENTE}'].DBInstanceIdentifier" --output text)
+          RDS=$(aws rds describe-db-instances --query "DBInstances[?DBInstanceIdentifier=='oficina-os-db-${AMBIENTE}' || DBInstanceIdentifier=='oficina-billing-db-${AMBIENTE}' || DBInstanceIdentifier=='oficina-api-db-${AMBIENTE}'].DBInstanceIdentifier" --output text)
+          DOCDB=$(aws docdb describe-db-clusters --query "DBClusters[?DBClusterIdentifier=='oficina-execution-docdb-${AMBIENTE}'].DBClusterIdentifier" --output text)
           LAMBDA=$(aws cloudformation describe-stacks --query "Stacks[?StackName=='oficina-auth-lambda-${AMBIENTE}'].StackName" --output text)
-          if [ -n "$RDS$LAMBDA" ]; then
-            echo "::error::Rode antes o Destroy AWS de oficina-auth-lambda e oficina-infra-db. Ainda de pé: $RDS $LAMBDA"
+          if [ -n "$RDS$DOCDB$LAMBDA" ]; then
+            echo "::error::Rode antes o Destroy AWS de oficina-auth-lambda, tech-challenge-1, oficina-billing-service e oficina-execution-service. Ainda de pé: $RDS $DOCDB $LAMBDA"
             exit 1
           fi
 
@@ -73,6 +74,17 @@ jobs:
         if: inputs.stack == 'cluster'
         working-directory: ${{ github.workspace }}
         run: |
-          echo "EKS:  $(aws eks list-clusters --query "clusters[?@=='oficina-api-${AMBIENTE}']" --output text)"
-          echo "NAT:  $(aws ec2 describe-instances --filters Name=tag:Name,Values=oficina-api-${AMBIENTE}-nat Name=instance-state-name,Values=running --query 'Reservations[].Instances[].InstanceId' --output text)"
-          echo "NLB:  $(aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='oficina-api-nlb-${AMBIENTE}'].LoadBalancerName" --output text)"
+          EKS=$(aws eks list-clusters --query "clusters[?@=='oficina-api-${AMBIENTE}']" --output text)
+          NAT=$(aws ec2 describe-instances --filters Name=tag:Name,Values=oficina-api-${AMBIENTE}-nat Name=instance-state-name,Values=pending,running,stopping,stopped --query 'Reservations[].Instances[].InstanceId' --output text)
+          NLB=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?LoadBalancerName=='oficina-api-nlb-${AMBIENTE}'].LoadBalancerName" --output text)
+          RDS=$(aws rds describe-db-instances --query "DBInstances[?starts_with(DBInstanceIdentifier, 'oficina-') && ends_with(DBInstanceIdentifier, '-${AMBIENTE}')].DBInstanceIdentifier" --output text)
+          DOCDB=$(aws docdb describe-db-clusters --query "DBClusters[?starts_with(DBClusterIdentifier, 'oficina-') && ends_with(DBClusterIdentifier, '-${AMBIENTE}')].DBClusterIdentifier" --output text)
+          echo "EKS:        $EKS"
+          echo "NAT:        $NAT"
+          echo "NLB:        $NLB"
+          echo "RDS:        $RDS"
+          echo "DocumentDB: $DOCDB"
+          if [ -n "$EKS$NAT$NLB$RDS$DOCDB" ]; then
+            echo "::error::Recursos pagos ainda existem no ambiente ${AMBIENTE}."
+            exit 1
+          fi
