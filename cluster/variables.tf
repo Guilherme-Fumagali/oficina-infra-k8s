@@ -66,7 +66,7 @@ variable "public_subnet_cidrs" {
 }
 
 variable "private_subnet_cidrs" {
-  description = "Subnets privadas por AZ. Hospedam nós do EKS, RDS, Lambda e o NLB interno."
+  description = "Subnets privadas por AZ. Hospedam nós do EKS, bancos dos serviços, Lambda e o NLB interno."
   type        = map(string)
   default = {
     "us-east-1a" = "10.0.11.0/24"
