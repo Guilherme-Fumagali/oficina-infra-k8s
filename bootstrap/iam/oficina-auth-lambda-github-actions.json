@@ -38,6 +38,37 @@
       ]
     },
     {
+      "Sid": "TabelaDeDesafios",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:CreateTable",
+        "dynamodb:DeleteTable",
+        "dynamodb:DescribeContinuousBackups",
+        "dynamodb:DescribeContributorInsights",
+        "dynamodb:DescribeKinesisStreamingDestination",
+        "dynamodb:DescribeTable",
+        "dynamodb:DescribeTimeToLive",
+        "dynamodb:GetResourcePolicy",
+        "dynamodb:ListTagsOfResource",
+        "dynamodb:TagResource",
+        "dynamodb:UntagResource",
+        "dynamodb:UpdateContinuousBackups",
+        "dynamodb:UpdateTable",
+        "dynamodb:UpdateTimeToLive"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/oficina-auth-*"
+    },
+    {
+      "Sid": "IdentidadeDoRemetente",
+      "Effect": "Allow",
+      "Action": [
+        "ses:CreateEmailIdentity",
+        "ses:DeleteEmailIdentity",
+        "ses:GetEmailIdentity"
+      ],
+      "Resource": "arn:aws:ses:us-east-1:ACCOUNT_ID:identity/*"
+    },
+    {
       "Sid": "VpcConfigDaFuncao",
       "Effect": "Allow",
       "Action": [

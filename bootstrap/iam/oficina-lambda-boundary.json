@@ -50,6 +50,23 @@
       "Condition": {
         "StringEquals": { "kms:ViaService": "ssm.us-east-1.amazonaws.com" }
       }
+    },
+    {
+      "Sid": "TabelaDeDesafios",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:DeleteItem",
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/oficina-auth-*"
+    },
+    {
+      "Sid": "EnvioDoCodigo",
+      "Effect": "Allow",
+      "Action": "ses:SendEmail",
+      "Resource": "arn:aws:ses:us-east-1:ACCOUNT_ID:identity/*"
     }
   ]
 }
