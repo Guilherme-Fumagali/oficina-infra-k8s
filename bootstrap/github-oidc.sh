@@ -11,9 +11,16 @@ IAM_DIR="$(cd "$(dirname "$0")" && pwd)/iam"
 
 REPOS=(
   "tech-challenge-1|oficina-api-github-actions"
+  "oficina-billing-service|oficina-billing-service-github-actions"
+  "oficina-execution-service|oficina-execution-service-github-actions"
   "oficina-auth-lambda|oficina-auth-lambda-github-actions"
   "oficina-infra-db|oficina-infra-db-github-actions"
   "oficina-infra-k8s|oficina-infra-k8s-github-actions"
+)
+ROLES_DE_DEPLOY=(
+  oficina-api-github-actions
+  oficina-billing-service-github-actions
+  oficina-execution-service-github-actions
 )
 declare -A BRANCH_DO_AMBIENTE=([staging]=develop [prod]=main)
 AMBIENTE_COM_REVISOR="prod"
@@ -149,7 +156,8 @@ for entrada in "${REPOS[@]}"; do
   garantir_role "$repo" "$role"
 done
 
-gh variable set API_DEPLOY_ROLE_ARN --repo "${OWNER}/oficina-infra-k8s" \
-  --body "arn:aws:iam::${ACCOUNT_ID}:role/oficina-api-github-actions"
+gh variable set API_DEPLOY_ROLE_ARNS --repo "${OWNER}/oficina-infra-k8s" \
+  --body "$(jq -n -c --arg conta "$ACCOUNT_ID" '$ARGS.positional | map("arn:aws:iam::\($conta):role/\(.)")' \
+    --args "${ROLES_DE_DEPLOY[@]}")"
 
 log "Pronto. Cada repositório assume só a própria role: develop/staging para homologação, main/prod para produção."
