@@ -22,9 +22,32 @@ variable "kubernetes_version" {
 }
 
 variable "node_instance_types" {
-  description = "Tipos de instância dos nós. t3.medium comporta as 4 réplicas do HPA e a integração Kubernetes do New Relic em 2 nós."
+  description = "Tipos de instância dos nós. Em 2 nós t3.medium cabem 2 réplicas de cada serviço, a plataforma e a integração Kubernetes do New Relic."
   type        = list(string)
   default     = ["t3.medium"]
+}
+
+variable "node_desired_size" {
+  description = "Quantidade de nós em execução. O valor 3 acrescenta um nó caso os pods dos três serviços não caibam em 2."
+  type        = number
+  default     = 2
+
+  validation {
+    condition     = var.node_desired_size >= var.node_min_size && var.node_desired_size <= var.node_max_size
+    error_message = "node_desired_size deve estar entre node_min_size e node_max_size."
+  }
+}
+
+variable "node_min_size" {
+  description = "Quantidade mínima de nós do node group."
+  type        = number
+  default     = 2
+}
+
+variable "node_max_size" {
+  description = "Quantidade máxima de nós do node group."
+  type        = number
+  default     = 4
 }
 
 variable "vpc_cidr" {

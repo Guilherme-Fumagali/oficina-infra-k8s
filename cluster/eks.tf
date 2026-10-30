@@ -128,9 +128,9 @@ resource "aws_eks_node_group" "oficina" {
   instance_types = var.node_instance_types
 
   scaling_config {
-    desired_size = 2
-    min_size     = 2
-    max_size     = 4
+    desired_size = var.node_desired_size
+    min_size     = var.node_min_size
+    max_size     = var.node_max_size
   }
 
   update_config {
