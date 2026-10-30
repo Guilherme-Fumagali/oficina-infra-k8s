@@ -92,10 +92,22 @@ variable "ci_role_principal_arns" {
   default     = []
 }
 
-variable "app_node_port" {
-  description = "NodePort fixo do Service da aplicação, alvo do target group do NLB."
-  type        = number
-  default     = 30080
+variable "servicos" {
+  description = "Serviços publicados pelo NLB interno: NodePort fixo do Service no cluster e porta do listener (SPEC-08 §1)."
+  type = map(object({
+    node_port     = number
+    listener_port = number
+  }))
+  default = {
+    os        = { node_port = 30080, listener_port = 80 }
+    billing   = { node_port = 30081, listener_port = 8081 }
+    execution = { node_port = 30082, listener_port = 8082 }
+  }
+
+  validation {
+    condition     = alltrue([for s in values(var.servicos) : s.node_port >= 30000 && s.node_port <= 32767])
+    error_message = "node_port deve estar na faixa de NodePort do Kubernetes (30000-32767)."
+  }
 }
 
 variable "enable_lambda_routes" {

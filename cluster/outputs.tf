@@ -20,6 +20,11 @@ output "nlb_dns_name" {
   value       = aws_lb.interno.dns_name
 }
 
+output "nlb_listener_ports" {
+  description = "Porta do listener do NLB interno por servico."
+  value       = { for chave, listener in aws_lb_listener.servico : chave => listener.port }
+}
+
 output "nat_public_ip" {
   description = "IP de saida da VPC — util para liberar em allowlist de terceiros."
   value       = aws_eip.nat.public_ip
