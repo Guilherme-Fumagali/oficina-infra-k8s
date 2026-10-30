@@ -19,7 +19,7 @@ Bancos, filas e identidades dos pods não são criados aqui. Cada serviço os de
 
 ## Mudanças da Fase 4
 
-Na Fase 4 o monólito foi dividido em três serviços, e este repositório deixou de conter recursos de um serviço específico. As decisões estão registradas na ADR-022 (infraestrutura por serviço e Pod Identity) e na ADR-023 (borda com listener e NodePort por serviço).
+Na Fase 4 o monólito foi dividido em três serviços, e este repositório deixou de conter recursos de um serviço específico. As decisões estão registradas na [ADR-022](https://github.com/Guilherme-Fumagali/tech-challenge-1/blob/develop/docs/tech-challenge-4/adrs/ADR-022-infra-por-servico-pod-identity.md) (infraestrutura por serviço e Pod Identity) e na [ADR-023](https://github.com/Guilherme-Fumagali/tech-challenge-1/blob/develop/docs/tech-challenge-4/adrs/ADR-023-borda-por-servico.md) (borda com listener e NodePort por serviço).
 
 | Tema | Fase 3 | Fase 4 |
 |---|---|---|
