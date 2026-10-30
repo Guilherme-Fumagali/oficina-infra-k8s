@@ -122,7 +122,7 @@ resource "aws_apigatewayv2_stage" "principal" {
   }
 
   dynamic "route_settings" {
-    for_each = var.enable_lambda_routes ? ["POST /auth", "POST /auth/funcionarios"] : []
+    for_each = var.enable_lambda_routes ? local.rotas_auth : []
     content {
       route_key              = route_settings.value
       throttling_rate_limit  = 10
@@ -145,10 +145,7 @@ resource "aws_apigatewayv2_stage" "principal" {
     })
   }
 
-  depends_on = [
-    aws_apigatewayv2_route.auth,
-    aws_apigatewayv2_route.auth_funcionarios,
-  ]
+  depends_on = [aws_apigatewayv2_route.auth]
 }
 
 resource "aws_apigatewayv2_integration" "servico" {
@@ -217,44 +214,54 @@ resource "aws_lambda_permission" "authorizer" {
   source_arn    = "${aws_apigatewayv2_api.oficina.execution_arn}/*"
 }
 
-resource "aws_apigatewayv2_route" "auth" {
-  count = var.enable_lambda_routes ? 1 : 0
-
-  api_id    = aws_apigatewayv2_api.oficina.id
-  route_key = "POST /auth"
-  target    = "integrations/${aws_apigatewayv2_integration.auth[0].id}"
-}
-
-resource "aws_apigatewayv2_route" "auth_funcionarios" {
-  count = var.enable_lambda_routes ? 1 : 0
-
-  api_id    = aws_apigatewayv2_api.oficina.id
-  route_key = "POST /auth/funcionarios"
-  target    = "integrations/${aws_apigatewayv2_integration.auth[0].id}"
-}
-
 locals {
-  rotas_publicas = [
-    "GET /api/ordens/{id}/status",
-    "POST /api/ordens/{id}/aprovar-externo",
-    "GET /api/ordens/{id}/aprovar-externo",
-    "GET /api/ordens/{id}/reprovar-externo",
-    "GET /actuator/health",
+  rotas_auth = [
+    "POST /auth",
+    "POST /auth/confirmacao",
+    "POST /auth/funcionarios",
+    "POST /auth/funcionarios/confirmacao",
   ]
+
+  rotas_protegidas = {
+    "ANY /api/{proxy+}"            = "os"
+    "ANY /api/orcamentos"          = "billing"
+    "ANY /api/orcamentos/{proxy+}" = "billing"
+    "ANY /api/pagamentos/{proxy+}" = "billing"
+    "ANY /api/execucoes"           = "execution"
+    "ANY /api/execucoes/{proxy+}"  = "execution"
+  }
+
+  rotas_publicas = {
+    "GET /api/ordens/{id}/status"                = "os"
+    "GET /actuator/health"                       = "os"
+    "GET /api/orcamentos/{id}/decisao"           = "billing"
+    "POST /api/orcamentos/{id}/decisao"          = "billing"
+    "POST /api/pagamentos/webhooks/mercado-pago" = "billing"
+  }
 }
 
-resource "aws_apigatewayv2_route" "publicas" {
-  for_each = toset(local.rotas_publicas)
+resource "aws_apigatewayv2_route" "auth" {
+  for_each = toset(var.enable_lambda_routes ? local.rotas_auth : [])
 
   api_id    = aws_apigatewayv2_api.oficina.id
   route_key = each.value
-  target    = "integrations/${aws_apigatewayv2_integration.servico["os"].id}"
+  target    = "integrations/${aws_apigatewayv2_integration.auth[0].id}"
+}
+
+resource "aws_apigatewayv2_route" "publicas" {
+  for_each = local.rotas_publicas
+
+  api_id    = aws_apigatewayv2_api.oficina.id
+  route_key = each.key
+  target    = "integrations/${aws_apigatewayv2_integration.servico[each.value].id}"
 }
 
 resource "aws_apigatewayv2_route" "protegidas" {
+  for_each = local.rotas_protegidas
+
   api_id    = aws_apigatewayv2_api.oficina.id
-  route_key = "ANY /api/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.servico["os"].id}"
+  route_key = each.key
+  target    = "integrations/${aws_apigatewayv2_integration.servico[each.value].id}"
 
   authorization_type = var.enable_lambda_routes ? "CUSTOM" : "NONE"
   authorizer_id      = var.enable_lambda_routes ? aws_apigatewayv2_authorizer.jwt[0].id : null
