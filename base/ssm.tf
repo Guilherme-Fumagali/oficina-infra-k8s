@@ -1,7 +1,9 @@
 resource "aws_ssm_parameter" "ecr_repository_url" {
-  name  = "/oficina/${var.ambiente}/ecr-repository-url"
+  for_each = aws_ecr_repository.servico
+
+  name  = "/oficina/${var.ambiente}/${each.key}/ecr-repository-url"
   type  = "String"
-  value = aws_ecr_repository.oficina_api.repository_url
+  value = each.value.repository_url
 }
 
 resource "random_password" "jwt_secret" {

@@ -1,5 +1,15 @@
-resource "aws_ecr_repository" "oficina_api" {
-  name                 = "oficina-api-${var.ambiente}"
+locals {
+  servicos = {
+    os        = "os-service"
+    billing   = "billing-service"
+    execution = "execution-service"
+  }
+}
+
+resource "aws_ecr_repository" "servico" {
+  for_each = local.servicos
+
+  name                 = "oficina-${each.value}-${var.ambiente}"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
 
@@ -12,8 +22,10 @@ resource "aws_ecr_repository" "oficina_api" {
   }
 }
 
-resource "aws_ecr_lifecycle_policy" "oficina_api" {
-  repository = aws_ecr_repository.oficina_api.name
+resource "aws_ecr_lifecycle_policy" "servico" {
+  for_each = aws_ecr_repository.servico
+
+  repository = each.value.name
 
   policy = jsonencode({
     rules = [
