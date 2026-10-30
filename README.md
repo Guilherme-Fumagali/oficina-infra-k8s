@@ -19,7 +19,7 @@ Bancos, filas e identidades dos pods não são criados aqui. Cada serviço os de
 
 ## Mudanças da Fase 4
 
-Na Fase 4 o monólito foi dividido em três serviços, e este repositório deixou de conter recursos de um serviço específico. As decisões estão registradas na [ADR-022](https://github.com/Guilherme-Fumagali/tech-challenge-1/blob/develop/docs/tech-challenge-4/adrs/ADR-022-infra-por-servico-pod-identity.md) (infraestrutura por serviço e Pod Identity) e na [ADR-023](https://github.com/Guilherme-Fumagali/tech-challenge-1/blob/develop/docs/tech-challenge-4/adrs/ADR-023-borda-por-servico.md) (borda com listener e NodePort por serviço).
+Na Fase 4 o monólito foi dividido em três serviços, e este repositório deixou de conter recursos de um serviço específico. A decisão está registrada na [ADR-022](https://github.com/Guilherme-Fumagali/tech-challenge-1/blob/develop/docs/tech-challenge-4/adrs/ADR-022-infra-por-servico-pod-identity.md) (infraestrutura por serviço, Pod Identity e borda com listener e NodePort por serviço).
 
 | Tema | Fase 3 | Fase 4 |
 |---|---|---|
@@ -319,8 +319,8 @@ Os alertas pertencem à política `AWS-Oficina-<Ambiente>`, e o workflow de mesm
 | `<Serviço>-MemoriaPod-Warning`, uma por serviço | memória de trabalho do container em relação ao limite | acima de 85% por 10 min | `k8s-memoria-pod.md` |
 | `Mensageria-DLQ-Critical` | `max(oficina.mensageria.dlq.mensagens)` por fila | acima de 0 | `mensageria-dlq.md` |
 | `Saga-Falha-Critical` | `sum(oficina.saga.falhas)` | acima de 0 | `saga-falha.md` |
-| `Saga-Compensacoes-Warning` | `sum(oficina.saga.compensadas)` | acima de 5 em 15 min | `saga-compensacoes.md` |
-| `MercadoPago-Falhas-Warning` | `sum(oficina.integracao.mercadopago)` com `resultado` diferente de `sucesso` | acima de 0 em 5 min | `mercadopago-falhas.md` |
+| `Saga-Compensacoes-Warning` | `sum(oficina.saga.compensadas)` | acima de 5 em 15 min | `saga-falha.md` |
+| `MercadoPago-Falhas-Warning` | `sum(oficina.integracao.mercadopago)` com `resultado` diferente de `sucesso` | acima de 0 em 5 min | `integracao-falhas.md` |
 | `OS-FalhaTransicao-Critical` | `sum(oficina.os.transicoes)` com `resultado = 'falha'` | acima de 5 por 5 min | `os-falha-transicao.md` |
 | `Health-Uptime-Critical` | falhas do monitor sintético em `/actuator/health` | 2 ou mais por 10 min | `health-uptime.md` |
 

@@ -197,8 +197,8 @@ resource "newrelic_nrql_alert_condition" "saga_compensacoes" {
 
   policy_id          = newrelic_alert_policy.oficina[0].id
   name               = "AWS-Oficina-${local.amb}-Saga-Compensacoes-Warning"
-  description        = "Mais de 5 sagas compensadas em 15 minutos. Runbook: ${local.runbook_base}/saga-compensacoes.md"
-  runbook_url        = "${local.runbook_base}/saga-compensacoes.md"
+  description        = "Mais de 5 sagas compensadas em 15 minutos. Runbook: ${local.runbook_base}/saga-falha.md"
+  runbook_url        = "${local.runbook_base}/saga-falha.md"
   type               = "static"
   aggregation_window = 900
   aggregation_method = "event_flow"
@@ -221,8 +221,8 @@ resource "newrelic_nrql_alert_condition" "mercadopago_falhas" {
 
   policy_id          = newrelic_alert_policy.oficina[0].id
   name               = "AWS-Oficina-${local.amb}-MercadoPago-Falhas-Warning"
-  description        = "Chamadas ao Mercado Pago sem sucesso. Runbook: ${local.runbook_base}/mercadopago-falhas.md"
-  runbook_url        = "${local.runbook_base}/mercadopago-falhas.md"
+  description        = "Chamadas ao Mercado Pago sem sucesso. Runbook: ${local.runbook_base}/integracao-falhas.md"
+  runbook_url        = "${local.runbook_base}/integracao-falhas.md"
   type               = "static"
   aggregation_window = 60
   aggregation_method = "event_flow"
