@@ -144,3 +144,11 @@ resource "aws_eks_node_group" "oficina" {
     aws_route_table_association.private,
   ]
 }
+
+resource "aws_eks_addon" "pod_identity" {
+  cluster_name                = aws_eks_cluster.oficina.name
+  addon_name                  = "eks-pod-identity-agent"
+  resolve_conflicts_on_create = "OVERWRITE"
+
+  depends_on = [aws_eks_node_group.oficina]
+}
