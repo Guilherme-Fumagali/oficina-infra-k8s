@@ -14,10 +14,6 @@ on:
         description: "Segundo apply do cluster: liga as rotas da Lambda"
         type: boolean
         default: false
-      aplicar_manifests:
-        description: "Aplica os manifests Kubernetes ao final"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -27,15 +23,13 @@ env:
   AMBIENTE: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
   TF_VAR_ambiente: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
   TF_VAR_newrelic_license_key: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
-  TF_VAR_ci_role_principal_arn: ${{ vars.API_DEPLOY_ROLE_ARN }}
+  TF_VAR_ci_role_principal_arns: ${{ vars.API_DEPLOY_ROLE_ARNS || '[]' }}
   TF_VAR_cluster_admin_principal_arn: ${{ secrets.AWS_CLUSTER_ADMIN_ARN }}
   TF_VAR_newrelic_account_id: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
   TF_VAR_newrelic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
   TF_VAR_alerta_email: ${{ vars.ALERTA_EMAIL }}
   TF_VAR_enable_newrelic: ${{ vars.ENABLE_NEWRELIC || 'false' }}
   TF_VAR_enable_lambda_routes: ${{ inputs.enable_lambda_routes || 'false' }}
-  TF_VAR_aplicar_manifests: ${{ inputs.aplicar_manifests || 'false' }}
-  TF_VAR_funcionario_seed_cpf: ${{ secrets.FUNCIONARIO_SEED_CPF }}
 
 jobs:
   validate:

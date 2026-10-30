@@ -100,23 +100,23 @@ resource "aws_eks_access_policy_association" "admin" {
 }
 
 resource "aws_eks_access_entry" "ci" {
-  count         = var.ci_role_principal_arn == "" ? 0 : 1
+  for_each = toset(var.ci_role_principal_arns)
+
   cluster_name  = aws_eks_cluster.oficina.name
-  principal_arn = var.ci_role_principal_arn
+  principal_arn = each.value
 }
 
 resource "aws_eks_access_policy_association" "ci" {
-  count         = var.ci_role_principal_arn == "" ? 0 : 1
+  for_each = aws_eks_access_entry.ci
+
   cluster_name  = aws_eks_cluster.oficina.name
-  principal_arn = var.ci_role_principal_arn
+  principal_arn = each.value.principal_arn
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
 
   access_scope {
     type       = "namespace"
     namespaces = ["oficina"]
   }
-
-  depends_on = [aws_eks_access_entry.ci]
 }
 
 resource "aws_eks_node_group" "oficina" {
@@ -128,9 +128,9 @@ resource "aws_eks_node_group" "oficina" {
   instance_types = var.node_instance_types
 
   scaling_config {
-    desired_size = 2
-    min_size     = 2
-    max_size     = 4
+    desired_size = var.node_desired_size
+    min_size     = var.node_min_size
+    max_size     = var.node_max_size
   }
 
   update_config {
@@ -143,4 +143,12 @@ resource "aws_eks_node_group" "oficina" {
     aws_iam_role_policy_attachment.eks_node_ecr_readonly,
     aws_route_table_association.private,
   ]
+}
+
+resource "aws_eks_addon" "pod_identity" {
+  cluster_name                = aws_eks_cluster.oficina.name
+  addon_name                  = "eks-pod-identity-agent"
+  resolve_conflicts_on_create = "OVERWRITE"
+
+  depends_on = [aws_eks_node_group.oficina]
 }

@@ -1,0 +1,240 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EcrLogin",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*"
+    },
+    {
+      "Sid": "EcrPush",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:CompleteLayerUpload",
+        "ecr:DescribeRepositories",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:InitiateLayerUpload",
+        "ecr:PutImage",
+        "ecr:UploadLayerPart"
+      ],
+      "Resource": "arn:aws:ecr:us-east-1:ACCOUNT_ID:repository/oficina-billing-service-*"
+    },
+    {
+      "Sid": "EksKubeconfig",
+      "Effect": "Allow",
+      "Action": "eks:DescribeCluster",
+      "Resource": "arn:aws:eks:us-east-1:ACCOUNT_ID:cluster/oficina-api-*"
+    },
+    {
+      "Sid": "PodIdentity",
+      "Effect": "Allow",
+      "Action": [
+        "eks:CreatePodIdentityAssociation",
+        "eks:DeletePodIdentityAssociation",
+        "eks:DescribePodIdentityAssociation",
+        "eks:ListPodIdentityAssociations",
+        "eks:TagResource",
+        "eks:UntagResource"
+      ],
+      "Resource": [
+        "arn:aws:eks:us-east-1:ACCOUNT_ID:cluster/oficina-api-*",
+        "arn:aws:eks:us-east-1:ACCOUNT_ID:podidentityassociation/oficina-api-*/*"
+      ]
+    },
+    {
+      "Sid": "SsmDescribe",
+      "Effect": "Allow",
+      "Action": "ssm:DescribeParameters",
+      "Resource": "*"
+    },
+    {
+      "Sid": "SsmCompartilhado",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters"
+      ],
+      "Resource": [
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/oficina/*/api-gateway-url",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/oficina/*/eks-cluster-name",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/oficina/*/eks-node-security-group-id",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/oficina/*/jwt-secret",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/oficina/*/newrelic-license-key",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/oficina/*/private-subnet-ids",
+        "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/oficina/*/vpc-id"
+      ]
+    },
+    {
+      "Sid": "SsmDoServico",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:AddTagsToResource",
+        "ssm:DeleteParameter",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:ListTagsForResource",
+        "ssm:PutParameter",
+        "ssm:RemoveTagsFromResource"
+      ],
+      "Resource": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/oficina/*/billing/*"
+    },
+    {
+      "Sid": "KmsViaSsmERds",
+      "Effect": "Allow",
+      "Action": [
+        "kms:CreateGrant",
+        "kms:Decrypt",
+        "kms:DescribeKey",
+        "kms:Encrypt",
+        "kms:GenerateDataKey*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "kms:ViaService": [
+            "ssm.us-east-1.amazonaws.com",
+            "rds.us-east-1.amazonaws.com"
+          ]
+        }
+      }
+    },
+    {
+      "Sid": "TfStateBucket",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::oficina-api-tfstate-ACCOUNT_ID-*"
+    },
+    {
+      "Sid": "TfStateObjetos",
+      "Effect": "Allow",
+      "Action": [
+        "s3:DeleteObject",
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": "arn:aws:s3:::oficina-api-tfstate-ACCOUNT_ID-*/billing/*"
+    },
+    {
+      "Sid": "TfLock",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable",
+        "dynamodb:GetItem",
+        "dynamodb:PutItem"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/oficina-api-tfstate-lock"
+    },
+    {
+      "Sid": "RdsLeitura",
+      "Effect": "Allow",
+      "Action": "rds:Describe*",
+      "Resource": "*"
+    },
+    {
+      "Sid": "Rds",
+      "Effect": "Allow",
+      "Action": "rds:*",
+      "Resource": [
+        "arn:aws:rds:us-east-1:ACCOUNT_ID:db:oficina-billing-db-*",
+        "arn:aws:rds:us-east-1:ACCOUNT_ID:subgrp:oficina-billing-db-*",
+        "arn:aws:rds:us-east-1:ACCOUNT_ID:pg:oficina-billing-db-*",
+        "arn:aws:rds:us-east-1:ACCOUNT_ID:og:default:postgres-*"
+      ]
+    },
+    {
+      "Sid": "RdsServiceLinkedRole",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/aws-service-role/rds.amazonaws.com/*",
+      "Condition": {
+        "StringEquals": {
+          "iam:AWSServiceName": "rds.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "SecurityGroupDoBanco",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AuthorizeSecurityGroupEgress",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:CreateSecurityGroup",
+        "ec2:CreateTags",
+        "ec2:DeleteSecurityGroup",
+        "ec2:DeleteTags",
+        "ec2:Describe*",
+        "ec2:ModifySecurityGroupRules",
+        "ec2:RevokeSecurityGroupEgress",
+        "ec2:RevokeSecurityGroupIngress",
+        "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
+        "ec2:UpdateSecurityGroupRuleDescriptionsIngress"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:RequestedRegion": "us-east-1"
+        }
+      }
+    },
+    {
+      "Sid": "Filas",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:CreateQueue",
+        "sqs:DeleteQueue",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl",
+        "sqs:ListQueueTags",
+        "sqs:SetQueueAttributes",
+        "sqs:TagQueue",
+        "sqs:UntagQueue"
+      ],
+      "Resource": "arn:aws:sqs:us-east-1:ACCOUNT_ID:oficina-*-billing-comandos*"
+    },
+    {
+      "Sid": "PapelDoPodSoComBoundary",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:PutRolePolicy"
+      ],
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/oficina-billing-pod-*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PermissionsBoundary": "arn:aws:iam::ACCOUNT_ID:policy/oficina-pod-boundary"
+        }
+      }
+    },
+    {
+      "Sid": "PapelDoPodManutencao",
+      "Effect": "Allow",
+      "Action": [
+        "iam:DeleteRole",
+        "iam:DeleteRolePolicy",
+        "iam:GetRole",
+        "iam:GetRolePolicy",
+        "iam:ListAttachedRolePolicies",
+        "iam:ListInstanceProfilesForRole",
+        "iam:ListRolePolicies",
+        "iam:TagRole",
+        "iam:UntagRole"
+      ],
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/oficina-billing-pod-*"
+    },
+    {
+      "Sid": "PassarPapelParaPod",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::ACCOUNT_ID:role/oficina-billing-pod-*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "pods.eks.amazonaws.com"
+        }
+      }
+    }
+  ]
+}

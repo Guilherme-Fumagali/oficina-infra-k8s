@@ -9,16 +9,18 @@ resource "aws_lb" "interno" {
   tags = { Name = "oficina-api-nlb-${var.ambiente}" }
 }
 
-resource "aws_lb_target_group" "app" {
-  name        = "oficina-api-tg-${var.ambiente}"
-  port        = var.app_node_port
+resource "aws_lb_target_group" "servico" {
+  for_each = var.servicos
+
+  name        = "oficina-${each.key}-tg-${var.ambiente}"
+  port        = each.value.node_port
   protocol    = "TCP"
   target_type = "instance"
   vpc_id      = aws_vpc.oficina.id
 
   health_check {
     protocol            = "HTTP"
-    path                = "/actuator/health"
+    path                = "/actuator/health/readiness"
     port                = "traffic-port"
     healthy_threshold   = 2
     unhealthy_threshold = 2
@@ -28,30 +30,45 @@ resource "aws_lb_target_group" "app" {
   deregistration_delay = 30
 }
 
-resource "aws_autoscaling_attachment" "nodes" {
+resource "aws_autoscaling_attachment" "servico" {
+  for_each = aws_lb_target_group.servico
+
   autoscaling_group_name = aws_eks_node_group.oficina.resources[0].autoscaling_groups[0].name
-  lb_target_group_arn    = aws_lb_target_group.app.arn
+  lb_target_group_arn    = each.value.arn
 }
 
-resource "aws_lb_listener" "app" {
+resource "aws_lb_listener" "servico" {
+  for_each = var.servicos
+
   load_balancer_arn = aws_lb.interno.arn
-  port              = 80
+  port              = each.value.listener_port
   protocol          = "TCP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.servico[each.key].arn
+  }
+}
+
+locals {
+  nodeports_por_subnet = {
+    for par in setproduct(keys(var.servicos), keys(var.private_subnet_cidrs)) :
+    "${par[0]}-${par[1]}" => {
+      porta = var.servicos[par[0]].node_port
+      zona  = par[1]
+      cidr  = var.private_subnet_cidrs[par[1]]
+    }
   }
 }
 
 resource "aws_vpc_security_group_ingress_rule" "nodeport_do_nlb" {
-  for_each = var.private_subnet_cidrs
+  for_each = local.nodeports_por_subnet
 
   security_group_id = aws_eks_cluster.oficina.vpc_config[0].cluster_security_group_id
-  description       = "NodePort a partir do NLB interno (${each.key})"
-  cidr_ipv4         = each.value
-  from_port         = var.app_node_port
-  to_port           = var.app_node_port
+  description       = "NodePort ${each.value.porta} a partir do NLB interno (${each.value.zona})"
+  cidr_ipv4         = each.value.cidr
+  from_port         = each.value.porta
+  to_port           = each.value.porta
   ip_protocol       = "tcp"
 }
 
@@ -105,7 +122,7 @@ resource "aws_apigatewayv2_stage" "principal" {
   }
 
   dynamic "route_settings" {
-    for_each = var.enable_lambda_routes ? ["POST /auth", "POST /auth/funcionarios"] : []
+    for_each = var.enable_lambda_routes ? local.rotas_auth : []
     content {
       route_key              = route_settings.value
       throttling_rate_limit  = 10
@@ -128,16 +145,15 @@ resource "aws_apigatewayv2_stage" "principal" {
     })
   }
 
-  depends_on = [
-    aws_apigatewayv2_route.auth,
-    aws_apigatewayv2_route.auth_funcionarios,
-  ]
+  depends_on = [aws_apigatewayv2_route.auth]
 }
 
-resource "aws_apigatewayv2_integration" "cluster" {
+resource "aws_apigatewayv2_integration" "servico" {
+  for_each = aws_lb_listener.servico
+
   api_id             = aws_apigatewayv2_api.oficina.id
   integration_type   = "HTTP_PROXY"
-  integration_uri    = aws_lb_listener.app.arn
+  integration_uri    = each.value.arn
   integration_method = "ANY"
   connection_type    = "VPC_LINK"
   connection_id      = aws_apigatewayv2_vpc_link.oficina.id
@@ -198,44 +214,54 @@ resource "aws_lambda_permission" "authorizer" {
   source_arn    = "${aws_apigatewayv2_api.oficina.execution_arn}/*"
 }
 
-resource "aws_apigatewayv2_route" "auth" {
-  count = var.enable_lambda_routes ? 1 : 0
-
-  api_id    = aws_apigatewayv2_api.oficina.id
-  route_key = "POST /auth"
-  target    = "integrations/${aws_apigatewayv2_integration.auth[0].id}"
-}
-
-resource "aws_apigatewayv2_route" "auth_funcionarios" {
-  count = var.enable_lambda_routes ? 1 : 0
-
-  api_id    = aws_apigatewayv2_api.oficina.id
-  route_key = "POST /auth/funcionarios"
-  target    = "integrations/${aws_apigatewayv2_integration.auth[0].id}"
-}
-
 locals {
-  rotas_publicas = [
-    "GET /api/ordens/{id}/status",
-    "POST /api/ordens/{id}/aprovar-externo",
-    "GET /api/ordens/{id}/aprovar-externo",
-    "GET /api/ordens/{id}/reprovar-externo",
-    "GET /actuator/health",
+  rotas_auth = [
+    "POST /auth",
+    "POST /auth/confirmacao",
+    "POST /auth/funcionarios",
+    "POST /auth/funcionarios/confirmacao",
   ]
+
+  rotas_protegidas = {
+    "ANY /api/{proxy+}"            = "os"
+    "ANY /api/orcamentos"          = "billing"
+    "ANY /api/orcamentos/{proxy+}" = "billing"
+    "ANY /api/pagamentos/{proxy+}" = "billing"
+    "ANY /api/execucoes"           = "execution"
+    "ANY /api/execucoes/{proxy+}"  = "execution"
+  }
+
+  rotas_publicas = {
+    "GET /api/ordens/{id}/status"                = "os"
+    "GET /actuator/health"                       = "os"
+    "GET /api/orcamentos/{id}/decisao"           = "billing"
+    "POST /api/orcamentos/{id}/decisao"          = "billing"
+    "POST /api/pagamentos/webhooks/mercado-pago" = "billing"
+  }
 }
 
-resource "aws_apigatewayv2_route" "publicas" {
-  for_each = toset(local.rotas_publicas)
+resource "aws_apigatewayv2_route" "auth" {
+  for_each = toset(var.enable_lambda_routes ? local.rotas_auth : [])
 
   api_id    = aws_apigatewayv2_api.oficina.id
   route_key = each.value
-  target    = "integrations/${aws_apigatewayv2_integration.cluster.id}"
+  target    = "integrations/${aws_apigatewayv2_integration.auth[0].id}"
+}
+
+resource "aws_apigatewayv2_route" "publicas" {
+  for_each = local.rotas_publicas
+
+  api_id    = aws_apigatewayv2_api.oficina.id
+  route_key = each.key
+  target    = "integrations/${aws_apigatewayv2_integration.servico[each.value].id}"
 }
 
 resource "aws_apigatewayv2_route" "protegidas" {
+  for_each = local.rotas_protegidas
+
   api_id    = aws_apigatewayv2_api.oficina.id
-  route_key = "ANY /api/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.cluster.id}"
+  route_key = each.key
+  target    = "integrations/${aws_apigatewayv2_integration.servico[each.value].id}"
 
   authorization_type = var.enable_lambda_routes ? "CUSTOM" : "NONE"
   authorizer_id      = var.enable_lambda_routes ? aws_apigatewayv2_authorizer.jwt[0].id : null

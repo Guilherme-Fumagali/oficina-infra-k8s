@@ -22,9 +22,32 @@ variable "kubernetes_version" {
 }
 
 variable "node_instance_types" {
-  description = "Tipos de instância dos nós. t3.medium comporta as 4 réplicas do HPA e a integração Kubernetes do New Relic em 2 nós."
+  description = "Tipos de instância dos nós. Em 2 nós t3.medium cabem 2 réplicas de cada serviço, a plataforma e a integração Kubernetes do New Relic."
   type        = list(string)
   default     = ["t3.medium"]
+}
+
+variable "node_desired_size" {
+  description = "Quantidade de nós em execução. O valor 3 acrescenta um nó caso os pods dos três serviços não caibam em 2."
+  type        = number
+  default     = 2
+
+  validation {
+    condition     = var.node_desired_size >= var.node_min_size && var.node_desired_size <= var.node_max_size
+    error_message = "node_desired_size deve estar entre node_min_size e node_max_size."
+  }
+}
+
+variable "node_min_size" {
+  description = "Quantidade mínima de nós do node group."
+  type        = number
+  default     = 2
+}
+
+variable "node_max_size" {
+  description = "Quantidade máxima de nós do node group."
+  type        = number
+  default     = 4
 }
 
 variable "vpc_cidr" {
@@ -43,7 +66,7 @@ variable "public_subnet_cidrs" {
 }
 
 variable "private_subnet_cidrs" {
-  description = "Subnets privadas por AZ. Hospedam nós do EKS, RDS, Lambda e o NLB interno."
+  description = "Subnets privadas por AZ. Hospedam nós do EKS, bancos dos serviços, Lambda e o NLB interno."
   type        = map(string)
   default = {
     "us-east-1a" = "10.0.11.0/24"
@@ -63,16 +86,28 @@ variable "cluster_admin_principal_arn" {
   default     = ""
 }
 
-variable "ci_role_principal_arn" {
-  description = "Role da pipeline do oficina-api, com permissão de edição só no namespace oficina."
-  type        = string
-  default     = ""
+variable "ci_role_principal_arns" {
+  description = "Roles dos pipelines dos serviços (OS, Billing e Execution), com permissão de edição só no namespace oficina."
+  type        = list(string)
+  default     = []
 }
 
-variable "app_node_port" {
-  description = "NodePort fixo do Service da aplicação, alvo do target group do NLB."
-  type        = number
-  default     = 30080
+variable "servicos" {
+  description = "Serviços publicados pelo NLB interno: NodePort fixo do Service no cluster e porta do listener (SPEC-08 §1)."
+  type = map(object({
+    node_port     = number
+    listener_port = number
+  }))
+  default = {
+    os        = { node_port = 30080, listener_port = 80 }
+    billing   = { node_port = 30081, listener_port = 8081 }
+    execution = { node_port = 30082, listener_port = 8082 }
+  }
+
+  validation {
+    condition     = alltrue([for s in values(var.servicos) : s.node_port >= 30000 && s.node_port <= 32767])
+    error_message = "node_port deve estar na faixa de NodePort do Kubernetes (30000-32767)."
+  }
 }
 
 variable "enable_lambda_routes" {
@@ -109,24 +144,6 @@ variable "newrelic_api_key" {
 variable "alerta_email" {
   description = "Destinatário das notificações de alerta."
   type        = string
-  default     = ""
-}
-
-variable "aplicar_manifests" {
-  description = <<-EOT
-    Aplica os manifests do Kubernetes no cluster ao final do apply.
-
-    Fica false quando o RDS ainda não existe (primeiro apply), porque o ConfigMap
-    precisa do endpoint do banco publicado por oficina-infra-db (SPEC-05 §6).
-  EOT
-  type        = bool
-  default     = false
-}
-
-variable "funcionario_seed_cpf" {
-  description = "CPF do funcionário cadastrado pela migration de seed; aplicado somente em homologação."
-  type        = string
-  sensitive   = true
   default     = ""
 }
 
