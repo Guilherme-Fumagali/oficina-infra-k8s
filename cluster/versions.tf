@@ -10,10 +10,6 @@ terraform {
       source  = "newrelic/newrelic"
       version = "~> 3.48"
     }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.5"
-    }
     null = {
       source  = "hashicorp/null"
       version = "~> 3.2"

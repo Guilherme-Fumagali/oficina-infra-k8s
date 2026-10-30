@@ -9,7 +9,7 @@ export const options = {
   ],
 };
 
-const BASE_URL = __ENV.BASE_URL || "http://oficina-api.oficina.svc.cluster.local";
+const BASE_URL = __ENV.BASE_URL || "http://os-service.oficina.svc.cluster.local";
 const TOKEN = __ENV.TOKEN;
 
 export default function () {

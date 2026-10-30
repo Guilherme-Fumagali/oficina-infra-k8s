@@ -147,24 +147,6 @@ variable "alerta_email" {
   default     = ""
 }
 
-variable "aplicar_manifests" {
-  description = <<-EOT
-    Aplica os manifests do Kubernetes no cluster ao final do apply.
-
-    Fica false quando o RDS ainda não existe (primeiro apply), porque o ConfigMap
-    precisa do endpoint do banco publicado por oficina-infra-db (SPEC-05 §6).
-  EOT
-  type        = bool
-  default     = false
-}
-
-variable "funcionario_seed_cpf" {
-  description = "CPF do funcionário cadastrado pela migration de seed; aplicado somente em homologação."
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
 variable "newrelic_bundle_versao" {
   description = "Versão do chart nri-bundle (integração Kubernetes do New Relic: métricas de nós, pods e deployments)."
   type        = string

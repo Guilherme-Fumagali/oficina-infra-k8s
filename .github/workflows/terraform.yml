@@ -14,10 +14,6 @@ on:
         description: "Segundo apply do cluster: liga as rotas da Lambda"
         type: boolean
         default: false
-      aplicar_manifests:
-        description: "Aplica os manifests Kubernetes ao final"
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -34,8 +30,6 @@ env:
   TF_VAR_alerta_email: ${{ vars.ALERTA_EMAIL }}
   TF_VAR_enable_newrelic: ${{ vars.ENABLE_NEWRELIC || 'false' }}
   TF_VAR_enable_lambda_routes: ${{ inputs.enable_lambda_routes || 'false' }}
-  TF_VAR_aplicar_manifests: ${{ inputs.aplicar_manifests || 'false' }}
-  TF_VAR_funcionario_seed_cpf: ${{ secrets.FUNCIONARIO_SEED_CPF }}
 
 jobs:
   validate:

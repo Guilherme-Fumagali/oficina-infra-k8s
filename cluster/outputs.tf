@@ -11,10 +11,6 @@ output "eks_cluster_endpoint" {
   value = aws_eks_cluster.oficina.endpoint
 }
 
-output "ecr_repository_url" {
-  value = data.aws_ssm_parameter.ecr_repository_url.insecure_value
-}
-
 output "nlb_dns_name" {
   description = "DNS interno do NLB. Nao deve ser alcancavel da internet."
   value       = aws_lb.interno.dns_name
