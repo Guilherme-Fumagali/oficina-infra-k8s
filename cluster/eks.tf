@@ -100,23 +100,23 @@ resource "aws_eks_access_policy_association" "admin" {
 }
 
 resource "aws_eks_access_entry" "ci" {
-  count         = var.ci_role_principal_arn == "" ? 0 : 1
+  for_each = toset(var.ci_role_principal_arns)
+
   cluster_name  = aws_eks_cluster.oficina.name
-  principal_arn = var.ci_role_principal_arn
+  principal_arn = each.value
 }
 
 resource "aws_eks_access_policy_association" "ci" {
-  count         = var.ci_role_principal_arn == "" ? 0 : 1
+  for_each = aws_eks_access_entry.ci
+
   cluster_name  = aws_eks_cluster.oficina.name
-  principal_arn = var.ci_role_principal_arn
+  principal_arn = each.value.principal_arn
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
 
   access_scope {
     type       = "namespace"
     namespaces = ["oficina"]
   }
-
-  depends_on = [aws_eks_access_entry.ci]
 }
 
 resource "aws_eks_node_group" "oficina" {

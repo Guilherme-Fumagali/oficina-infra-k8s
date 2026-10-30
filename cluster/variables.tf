@@ -63,10 +63,10 @@ variable "cluster_admin_principal_arn" {
   default     = ""
 }
 
-variable "ci_role_principal_arn" {
-  description = "Role da pipeline do oficina-api, com permissão de edição só no namespace oficina."
-  type        = string
-  default     = ""
+variable "ci_role_principal_arns" {
+  description = "Roles dos pipelines dos serviços (OS, Billing e Execution), com permissão de edição só no namespace oficina."
+  type        = list(string)
+  default     = []
 }
 
 variable "app_node_port" {
