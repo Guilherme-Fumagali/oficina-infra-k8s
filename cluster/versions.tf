@@ -23,7 +23,7 @@ provider "aws" {
   default_tags {
     tags = {
       Projeto   = "oficina-api"
-      Fase      = "tech-challenge-3"
+      Fase      = "tech-challenge-4"
       Ambiente  = var.ambiente
       ManagedBy = "terraform"
       Repo      = "oficina-infra-k8s"
