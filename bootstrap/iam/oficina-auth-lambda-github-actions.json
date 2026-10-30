@@ -59,16 +59,6 @@
       "Resource": "arn:aws:dynamodb:us-east-1:ACCOUNT_ID:table/oficina-auth-*"
     },
     {
-      "Sid": "IdentidadeDoRemetente",
-      "Effect": "Allow",
-      "Action": [
-        "ses:CreateEmailIdentity",
-        "ses:DeleteEmailIdentity",
-        "ses:GetEmailIdentity"
-      ],
-      "Resource": "arn:aws:ses:us-east-1:ACCOUNT_ID:identity/*"
-    },
-    {
       "Sid": "VpcConfigDaFuncao",
       "Effect": "Allow",
       "Action": [
