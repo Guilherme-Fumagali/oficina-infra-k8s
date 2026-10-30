@@ -1,6 +1,7 @@
 locals {
   amb        = title(var.ambiente)
   nr_enabled = var.enable_newrelic ? 1 : 0
+  nr_email   = var.enable_newrelic && var.alerta_email != "" ? 1 : 0
 
   runbook_base = "https://github.com/Guilherme-Fumagali/tech-challenge-1/blob/main/docs/runbooks"
 }
@@ -12,7 +13,7 @@ resource "newrelic_alert_policy" "oficina" {
 }
 
 resource "newrelic_notification_destination" "email" {
-  count = var.enable_newrelic && var.alerta_email != "" ? 1 : 0
+  count = local.nr_email
 
   name = "oficina-api-${var.ambiente}-email"
   type = "EMAIL"
@@ -20,6 +21,42 @@ resource "newrelic_notification_destination" "email" {
   property {
     key   = "email"
     value = var.alerta_email
+  }
+}
+
+resource "newrelic_notification_channel" "email" {
+  count = local.nr_email
+
+  name           = "oficina-api-${var.ambiente}-email"
+  type           = "EMAIL"
+  product        = "IINT"
+  destination_id = newrelic_notification_destination.email[0].id
+
+  property {
+    key   = "subject"
+    value = "{{ issueTitle }}"
+  }
+}
+
+resource "newrelic_workflow" "email" {
+  count = local.nr_email
+
+  name                  = "AWS-Oficina-${local.amb}"
+  muting_rules_handling = "NOTIFY_ALL_ISSUES"
+
+  issues_filter {
+    name = "politica-oficina-${var.ambiente}"
+    type = "FILTER"
+
+    predicate {
+      attribute = "labels.policyIds"
+      operator  = "EXACTLY_MATCHES"
+      values    = [newrelic_alert_policy.oficina[0].id]
+    }
+  }
+
+  destination {
+    channel_id = newrelic_notification_channel.email[0].id
   }
 }
 
