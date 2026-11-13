@@ -6,7 +6,7 @@ resource "aws_ssm_parameter" "vpc_id" {
 
 resource "aws_ssm_parameter" "private_subnet_ids" {
   name        = "/oficina/${var.ambiente}/private-subnet-ids"
-  description = "Lista separada por virgula, consumida por infra-db e pela Lambda"
+  description = "Lista separada por virgula, consumida pelo infra/ dos servicos e pela Lambda"
   type        = "StringList"
   value       = join(",", [for s in aws_subnet.private : s.id])
 }
@@ -25,7 +25,7 @@ resource "aws_ssm_parameter" "eks_cluster_name" {
 
 resource "aws_ssm_parameter" "eks_node_security_group_id" {
   name        = "/oficina/${var.ambiente}/eks-node-security-group-id"
-  description = "SG do cluster, referenciado pela regra de ingress do RDS"
+  description = "SG do cluster, referenciado pelas regras de ingress dos bancos dos servicos"
   type        = "String"
   value       = aws_eks_cluster.oficina.vpc_config[0].cluster_security_group_id
 }

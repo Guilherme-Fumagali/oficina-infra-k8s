@@ -11,13 +11,14 @@ output "eks_cluster_endpoint" {
   value = aws_eks_cluster.oficina.endpoint
 }
 
-output "ecr_repository_url" {
-  value = data.aws_ssm_parameter.ecr_repository_url.insecure_value
-}
-
 output "nlb_dns_name" {
   description = "DNS interno do NLB. Nao deve ser alcancavel da internet."
   value       = aws_lb.interno.dns_name
+}
+
+output "nlb_listener_ports" {
+  description = "Porta do listener do NLB interno por servico."
+  value       = { for chave, listener in aws_lb_listener.servico : chave => listener.port }
 }
 
 output "nat_public_ip" {

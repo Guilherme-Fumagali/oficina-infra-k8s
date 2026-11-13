@@ -178,6 +178,15 @@ resource "aws_vpc_endpoint" "s3" {
   tags = { Name = "${local.nome}-s3-endpoint" }
 }
 
+resource "aws_vpc_endpoint" "dynamodb" {
+  vpc_id            = aws_vpc.oficina.id
+  service_name      = "com.amazonaws.${var.aws_region}.dynamodb"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.private.id]
+
+  tags = { Name = "${local.nome}-dynamodb-endpoint" }
+}
+
 resource "aws_security_group" "lambda" {
   name        = "${local.nome}-lambda-sg"
   description = "Lambda de autenticacao por CPF dentro da VPC"
@@ -188,7 +197,7 @@ resource "aws_security_group" "lambda" {
 
 resource "aws_vpc_security_group_egress_rule" "lambda_saida" {
   security_group_id = aws_security_group.lambda.id
-  description       = "Saida para o RDS e servicos AWS"
+  description       = "Saida para o NLB interno e servicos AWS"
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
 }

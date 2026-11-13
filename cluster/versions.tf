@@ -10,10 +10,6 @@ terraform {
       source  = "newrelic/newrelic"
       version = "~> 3.48"
     }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.5"
-    }
     null = {
       source  = "hashicorp/null"
       version = "~> 3.2"
@@ -27,7 +23,7 @@ provider "aws" {
   default_tags {
     tags = {
       Projeto   = "oficina-api"
-      Fase      = "tech-challenge-3"
+      Fase      = "tech-challenge-4"
       Ambiente  = var.ambiente
       ManagedBy = "terraform"
       Repo      = "oficina-infra-k8s"
