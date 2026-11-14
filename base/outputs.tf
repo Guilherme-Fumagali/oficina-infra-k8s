@@ -1,3 +1,3 @@
-output "ecr_repository_url" {
-  value = aws_ecr_repository.oficina_api.repository_url
+output "ecr_repository_urls" {
+  value = { for chave, repositorio in aws_ecr_repository.servico : chave => repositorio.repository_url }
 }

@@ -3,24 +3,24 @@ framework:
 compact: true
 quiet: true
 skip-check:
-  - CKV_AWS_51
-  - CKV_AWS_136
-  - CKV_AWS_337
-  - CKV2_AWS_34
-  - CKV_AWS_309
-  - CKV_AWS_339
-  - CKV_AWS_37
-  - CKV_AWS_38
-  - CKV_AWS_39
-  - CKV_AWS_58
-  - CKV2_AWS_11
-  - CKV2_AWS_15
-  - CKV2_AWS_20
-  - CKV2_AWS_41
-  - CKV2_AWS_5
-  - CKV_AWS_126
-  - CKV_AWS_130
-  - CKV_AWS_150
-  - CKV_AWS_158
-  - CKV_AWS_338
-  - CKV_AWS_91
+  - CKV_AWS_51   # tag de imagem imutável no ECR; latest é sobrescrita
+  - CKV_AWS_136  # ECR com chave KMS própria; usa a chave da AWS
+  - CKV_AWS_337  # parâmetro SSM com chave KMS própria; usa a chave da AWS
+  - CKV2_AWS_34  # todo parâmetro SSM como SecureString; String guarda IDs e URLs
+  - CKV_AWS_309  # rota do API Gateway com autorizador; rotas públicas por decisão
+  - CKV_AWS_339  # versão suportada do EKS; falso positivo com a 1.36
+  - CKV_AWS_37   # logs do control plane do EKS; custo extra
+  - CKV_AWS_38   # endpoint público do EKS restrito por IP; usado pelos pipelines
+  - CKV_AWS_39   # endpoint público do EKS desligado; usado pelos pipelines
+  - CKV_AWS_58   # secrets do EKS com chave KMS própria; custo da chave
+  - CKV2_AWS_11  # flow logs da VPC; custo extra
+  - CKV2_AWS_15  # health check do ELB no ASG; falso positivo, ASG do EKS
+  - CKV2_AWS_20  # redirecionar HTTP para HTTPS no ALB; falso positivo, NLB TCP
+  - CKV2_AWS_41  # role IAM na instância EC2; a NAT instance não chama a AWS
+  - CKV2_AWS_5   # security group associado; falso positivo, Lambda e VPC Link
+  - CKV_AWS_126  # monitoramento detalhado do EC2; custo extra
+  - CKV_AWS_130  # sub-rede sem IP público automático; a NAT instance precisa
+  - CKV_AWS_150  # proteção contra exclusão do NLB; ambiente destruído a cada sessão
+  - CKV_AWS_158  # log group com chave KMS própria; usa a chave da AWS
+  - CKV_AWS_338  # retenção de logs por 1 ano; custo extra
+  - CKV_AWS_91   # access logs do NLB; custo extra
